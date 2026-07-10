@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plaza Musica – Plataforma de Reposición</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2242%22 fill=%22none%22 stroke=%22%23FF7A45%22 stroke-width=%228%22/%3E%3Ctext x=%2250%22 y=%2266%22 font-family=%22Georgia,serif%22 font-style=%22italic%22 font-size=%2246%22 fill=%22%23FF7A45%22 text-anchor=%22middle%22%3Epm%3C/text%3E%3C/svg%3E">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; color: #1a1a2e; }
+
+  header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: white; padding: 18px 32px; display: flex; align-items: center; gap: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: 0.5px; }
+  header span { font-size: 0.85rem; opacity: 0.7; margin-top: 2px; display: block; }
+  .logo { font-size: 2rem; }
+
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+  /* STEP CARDS */
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .step-card {
+    background: white; border-radius: 12px; padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08); border: 2px solid #e8eaf0;
+    transition: border-color 0.2s;
+  }
+  .step-card.active { border-color: #e63946; }
+  .step-card.done { border-color: #2dc653; }
+  .step-num {
+    width: 28px; height: 28px; border-radius: 50%; background: #e8eaf0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.8rem; color: #666; margin-bottom: 10px;
+  }
+  .step-card.active .step-num { background: #e63946; color: white; }
+  .step-card.done .step-num { background: #2dc653; color: white; }
+  .step-card h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 6px; }
+  .step-card p { font-size: 0.78rem; color: #666; margin-bottom: 12px; }
+
+  select, input[type=file] {
+    width: 100%; padding: 9px 12px; border: 1.5px solid #ddd; border-radius: 8px;
+    font-size: 0.85rem; background: white; color: #1a1a2e;
+  }
+  select:focus, input:focus { outline: none; border-color: #e63946; }
+  input[type=file] { cursor: pointer; padding: 6px; }
+  .file-status { font-size: 0.75rem; margin-top: 6px; min-height: 18px; }
+  .file-status.ok { color: #2dc653; }
+  .file-status.err { color: #e63946; }
+
+  /* PROCESS BUTTON */
+  .btn-process {
+    width: 100%; padding: 14px; background: linear-gradient(135deg, #e63946, #c1121f);
+    color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700;
+    cursor: pointer; letter-spacing: 0.5px; margin-bottom: 24px;
+    box-shadow: 0 3px 10px rgba(230,57,70,0.35); transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .btn-process:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(230,57,70,0.45); }
+  .btn-process:active { transform: translateY(0); }
+  .btn-process:disabled { background: #ccc; box-shadow: none; cursor: not-allowed; transform: none; }
+
+  /* SUMMARY CARDS */
+  .summary { display: none; }
+  .summary.visible { display: block; }
+  .summary-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .summary-header h2 { font-size: 1.1rem; font-weight: 700; }
+  .btn-export {
+    padding: 10px 22px; background: #2dc653; color: white; border: none;
+    border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    box-shadow: 0 2px 8px rgba(45,198,83,0.3); transition: transform 0.1s;
+  }
+  .btn-export:hover { transform: translateY(-1px); }
+
+  .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .stat-card {
+    background: white; border-radius: 10px; padding: 14px 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08); text-align: center;
+  }
+  .stat-card .label { font-size: 0.72rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .stat-card .value { font-size: 1.6rem; font-weight: 800; }
+  .stat-card .sub { font-size: 0.72rem; color: #aaa; margin-top: 2px; }
+  .stat-ok .value { color: #2dc653; }
+  .stat-warn .value { color: #f4a261; }
+  .stat-bad .value { color: #e63946; }
+  .stat-info .value { color: #4361ee; }
+
+  /* CUBICAJE SECTION */
+  .cubicaje-section { background: white; border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .cubicaje-section h3 { font-size: 0.85rem; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .cubicaje-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .cub-item { text-align: center; padding: 10px; border-radius: 8px; background: #f8f9fa; }
+  .cub-item .cub-label { font-size: 0.72rem; color: #888; margin-bottom: 4px; font-weight: 600; }
+  .cub-bar-wrap { height: 6px; background: #eee; border-radius: 3px; margin: 6px 0; overflow: hidden; }
+  .cub-bar { height: 100%; border-radius: 3px; background: #4361ee; transition: width 0.5s; }
+  .cub-bar.warn { background: #f4a261; }
+  .cub-bar.bad { background: #e63946; }
+  .cub-nums { font-size: 0.75rem; color: #555; }
+  .cub-nums strong { color: #1a1a2e; }
+
+  /* FILTERS */
+  .filters { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .filter-btn {
+    padding: 6px 14px; border-radius: 20px; border: 1.5px solid #ddd;
+    background: white; font-size: 0.78rem; cursor: pointer; transition: all 0.15s;
+    font-weight: 500; color: #555;
+  }
+  .filter-btn.active { background: #e63946; border-color: #e63946; color: white; }
+  .search-box {
+    padding: 7px 14px; border: 1.5px solid #ddd; border-radius: 20px;
+    font-size: 0.8rem; min-width: 200px; outline: none;
+  }
+  .search-box:focus { border-color: #e63946; }
+  .filter-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+  /* TABLE */
+  .table-wrap { background: white; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  thead th {
+    background: #1a1a2e; color: white; padding: 10px 12px; text-align: left;
+    font-weight: 600; font-size: 0.75rem; letter-spacing: 0.3px; white-space: nowrap;
+    position: sticky; top: 0; z-index: 2;
+  }
+  thead th.sortable { cursor: pointer; user-select: none; }
+  thead th.sortable:hover { background: #16213e; }
+  tbody tr { border-bottom: 1px solid #f0f2f5; transition: background 0.1s; }
+  tbody tr:hover { background: #fafbff; }
+  tbody tr.pedido-row { background: #f0fff4; }
+  tbody tr.pedido-row:hover { background: #e6ffed; }
+  td { padding: 8px 12px; vertical-align: middle; }
+  td.tipo { font-size: 0.7rem; background: #f0f2f5; border-radius: 4px; padding: 2px 7px; white-space: nowrap; display: inline-block; margin: 0; }
+  .badge { display: inline-block; font-size: 0.68rem; padding: 2px 7px; border-radius: 10px; font-weight: 600; }
+  .badge-vin { background: #fff3cd; color: #856404; }
+  .badge-cd { background: #d1ecf1; color: #0c5460; }
+  .badge-tor { background: #d4edda; color: #155724; }
+  .badge-other { background: #f0f2f5; color: #555; }
+  .stock-cm { font-weight: 700; color: #4361ee; }
+  .stock-t { font-weight: 700; color: #555; }
+  .stock-zero { color: #e63946; }
+  .qty-input {
+    width: 60px; text-align: center; border: 1.5px solid #ddd; border-radius: 6px;
+    padding: 4px 6px; font-size: 0.85rem; font-weight: 700;
+  }
+  .qty-input:focus { border-color: #e63946; outline: none; }
+  .qty-input.has-value { border-color: #2dc653; background: #f0fff4; color: #155724; }
+  .precio { color: #666; }
+  .producto-name { font-weight: 500; max-width: 300px; }
+  .no-data { text-align: center; padding: 40px; color: #aaa; }
+
+  /* PAGINATION */
+  .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 16px; }
+  .page-btn { padding: 6px 12px; border: 1.5px solid #ddd; background: white; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
+  .page-btn.active { background: #e63946; border-color: #e63946; color: white; }
+  .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .page-info { font-size: 0.78rem; color: #888; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; background: #1a1a2e; color: white;
+    padding: 12px 20px; border-radius: 10px; font-size: 0.85rem; z-index: 9999;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25); transform: translateY(100px); opacity: 0;
+    transition: all 0.3s; pointer-events: none;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { background: #2dc653; }
+  .toast.error { background: #e63946; }
+
+  @media (max-width: 768px) {
+    .container { padding: 12px; }
+    .steps { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🎵</div>
+  <div>
+    <h1>Plaza Musica – Plataforma de Reposición</h1>
+    <span>Sube los exports de Bsale y genera tu pedido automáticamente</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- STEPS -->
+  <div class="steps">
+
+    <!-- STEP 1: Sucursal -->
+    <div class="step-card active" id="card1">
+      <div class="step-num">1</div>
+      <h3>Selecciona tu sucursal</h3>
+      <p>Elige tu supervisor y luego el local</p>
+      <select id="selectSupervisor" onchange="onSupervisorChange()" style="margin-bottom:10px">
+        <option value="">— Seleccionar supervisor —</option>
+      </select>
+      <select id="selectSucursal" onchange="onSucursalChange()" disabled>
+        <option value="">— Primero selecciona supervisor —</option>
+      </select>
+    </div>
+
+    <!-- STEP 2: Stock CM -->
+    <div class="step-card" id="card2">
+      <div class="step-num">2</div>
+      <h3>Stock Casa Matriz</h3>
+      <p>Export de Bsale → Inventario → Sucursal: Casa Matriz → Con stock</p>
+      <input type="file" id="fileCM" accept=".xlsx,.xls,.csv" onchange="handleFile('CM', this)">
+      <div class="file-status" id="statusCM"></div>
+    </div>
+
+    <!-- STEP 3: Stock Tienda -->
+    <div class="step-card" id="card3">
+      <div class="step-num">3</div>
+      <h3>Stock Tienda</h3>
+      <p>Export de Bsale → Inventario → Sucursal: tu tienda → Todos</p>
+      <input type="file" id="fileTienda" accept=".xlsx,.xls,.csv" onchange="handleFile('Tienda', this)">
+      <div class="file-status" id="statusTienda"></div>
+    </div>
+
+    <!-- STEP 4: Lista de Precios -->
+    <div class="step-card" id="card4">
+      <div class="step-num">4</div>
+      <h3>Lista de Precios</h3>
+      <p>Export de Bsale → Lista de precios → "Plaza Musica Tiendas Físicas"</p>
+      <input type="file" id="filePrecios" accept=".xlsx,.xls,.csv" onchange="handleFile('Precios', this)">
+      <div class="file-status" id="statusPrecios"></div>
+    </div>
+
+    <!-- STEP 5: Guías de Despacho (opcional) -->
+    <div class="step-card" id="card5">
+      <div class="step-num">5</div>
+      <h3>Guías de Despacho <span style="font-size:0.7rem;color:#aaa;font-weight:400">(opcional)</span></h3>
+      <p>Reporte de GD de la semana desde Casa Matriz → rellena columna "en tránsito"</p>
+      <input type="file" id="fileGD" accept=".xlsx,.xls,.csv" onchange="handleFile('GD', this)">
+      <div class="file-status" id="statusGD"></div>
+    </div>
+
+  </div>
+
+  <button class="btn-process" id="btnProcess" onclick="processar()" disabled>
+    ⚡ Generar Pedido de Reposición
+  </button>
+
+  <!-- RESULTS -->
+  <div class="summary" id="summarySection">
+    <div class="summary-header">
+      <h2 id="summaryTitle">Pedido de Reposición</h2>
+      <button class="btn-export" onclick="exportExcel()">📥 Exportar a Excel</button>
+    </div>
+
+    <!-- STAT CARDS -->
+    <div class="stat-cards">
+      <div class="stat-card stat-info">
+        <div class="label">Total SKUs</div>
+        <div class="value" id="statTotal">0</div>
+        <div class="sub">en lista de precios</div>
+      </div>
+      <div class="stat-card stat-warn">
+        <div class="label">Sin stock en tienda</div>
+        <div class="value" id="statSinStock">0</div>
+        <div class="sub">con disponibilidad CM</div>
+      </div>
+      <div class="stat-card stat-ok">
+        <div class="label">Unidades a pedir</div>
+        <div class="value" id="statUnidades">0</div>
+        <div class="sub">en pedido actual</div>
+      </div>
+      <div class="stat-card stat-bad">
+        <div class="label">Sin stock en CM</div>
+        <div class="value" id="statSinCM">0</div>
+        <div class="sub">no disponibles</div>
+      </div>
+    </div>
+
+    <!-- CUBICAJE -->
+    <div class="cubicaje-section" id="cubicajeSection" style="display:none">
+      <h3>Comparativa de cubicaje</h3>
+      <div class="cubicaje-grid" id="cubicajeGrid"></div>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="filters">
+      <button class="filter-btn active" onclick="setFilter('todos', this)">Todos</button>
+      <button class="filter-btn" onclick="setFilter('pedir', this)">Para pedir</button>
+      <button class="filter-btn" onclick="setFilter('sin_cm', this)">Sin stock CM</button>
+      <div class="filter-right">
+        <input class="search-box" type="text" id="searchBox" placeholder="🔍 Buscar producto..." oninput="onSearch()">
+        <select style="width:auto;padding:7px 10px;font-size:0.78rem" onchange="setCategoria(this.value)">
+          <option value="">Todas las categorías</option>
+          <option value="VIN">Vinilos</option>
+          <option value="CD">CDs</option>
+          <option value="TOR">Tocadiscos</option>
+          <option value="OTRO">Otros</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-wrap">
+      <table id="resultTable">
+        <thead>
+          <tr>
+            <th style="width:36px"><input type="checkbox" id="checkAll" onclick="toggleAll(this)" title="Seleccionar todos"></th>
+            <th class="sortable" onclick="sortTable('tipo')">Tipo d. ↕</th>
+            <th>Código Barras</th>
+            <th>SKU</th>
+            <th>Variante</th>
+            <th class="sortable" onclick="sortTable('precio')">Precio Venta ↕</th>
+            <th class="sortable" onclick="sortTable('stock_cm')">Stock CM ↕</th>
+            <th class="sortable" onclick="sortTable('stock_t')">Stock Tienda ↕</th>
+            <th>pedido</th>
+            <th style="color:#aaa">en tránsito</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="8" class="no-data">Genera el pedido para ver los resultados</td></tr>
+        </tbody>
+      </table>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// DATOS MAESTROS DE SUCURSALES
+// ============================================================
+const SUPERVISORES = [
+  { name: 'ALEJANDRO', codes: ['PM01','PM02','PM04','PM05','PM07','PM09','PM17','PM20','PM22','PM23','PM25','PM29','PM37','PM41','PM44'] },
+  { name: 'ANGELICA',  codes: ['PM26'] },
+  { name: 'CAMILO',    codes: ['PM03','PM12'] },
+  { name: 'ESTEBAN',   codes: ['PM06','PM08','PM16','PM28','PM30','PM31','PM32','PM36','PM45'] },
+  { name: 'MIRTHA',    codes: ['PM10','PM11','PM13','PM14','PM18','PM19','PM24','PM33','PM34','PM38','PM39','PM43'] },
+];
+
+const SUCURSALES = [
+  { code:'PM01', name:'PLAZA MUSICA MALL PLAZA EGAÑA PM01',          vin:1120, cd:725,  tor:12 },
+  { code:'PM02', name:'PLAZA MUSICA MALL PLAZA TOBALABA PM02',        vin:700,  cd:500,  tor:7  },
+  { code:'PM03', name:'PLAZA MUSICA MALL COSTANERA CENTER PM03',      vin:1072, cd:1220, tor:11 },
+  { code:'PM04', name:'PLAZA MUSICA MALL OPEN KENNEDY PM04',          vin:700,  cd:500,  tor:7  },
+  { code:'PM05', name:'PLAZA MUSICA MALL ALTO LAS CONDES PM05',       vin:700,  cd:500,  tor:7  },
+  { code:'PM06', name:'PLAZA MUSICA MALL MARINA ARAUCO PM06',         vin:700,  cd:400,  tor:4  },
+  { code:'PM07', name:'PLAZA MUSICA PORTAL LA REINA PM07',            vin:700,  cd:500,  tor:7  },
+  { code:'PM08', name:'PLAZA MUSICA MALL CASTRO PM08',                vin:700,  cd:500,  tor:7  },
+  { code:'PM09', name:'PLAZA MUSICA MALL SPORT PM09',                 vin:700,  cd:500,  tor:7  },
+  { code:'PM10', name:'PLAZA MUSICA MALL PLAZA EL TREBOL PM10',       vin:700,  cd:500,  tor:7  },
+  { code:'PM11', name:'PLAZA MUSICA MALL CONCEPCION PM11',            vin:700,  cd:500,  tor:6  },
+  { code:'PM12', name:'PLAZA MUSICA MALL MUT PM12',                   vin:1030, cd:1142, tor:13 },
+  { code:'PM13', name:'PLAZA MUSICA MALL PLAZA COPIAPO PM13',         vin:700,  cd:500,  tor:7  },
+  { code:'PM14', name:'PLAZA MUSICA MALL PLAZA LA SERENA PM14',       vin:700,  cd:500,  tor:7  },
+  { code:'PM15', name:'PLAZA MUSICA MALL OPEN RANCAGUA PM15',         vin:700,  cd:500,  tor:7  },
+  { code:'PM16', name:'PLAZA MUSICA MALL PLAZA MAULE PM16',           vin:700,  cd:500,  tor:7  },
+  { code:'PM17', name:'PLAZA MUSICA MALL ARAUCO MAIPU PM17',          vin:700,  cd:500,  tor:7  },
+  { code:'PM18', name:'PLAZA MUSICA MALL PLAZA ANTOFAGASTA PM18',     vin:760,  cd:540,  tor:10 },
+  { code:'PM19', name:'PLAZA MUSICA MALL PLAZA CALAMA PM19',          vin:1100, cd:600,  tor:12 },
+  { code:'PM20', name:'PLAZA MUSICA MALL PLAZA VESPUCIO PM20',        vin:700,  cd:500,  tor:7  },
+  { code:'PM21', name:'PLAZA MUSICA MALL CURICO PM21',                vin:700,  cd:500,  tor:7  },
+  { code:'PM22', name:'PLAZA MUSICA PATIO BELLAVISTA PM22',           vin:994,  cd:1146, tor:10 },
+  { code:'PM23', name:'PLAZA MUSICA MALL FLORIDA CENTER PM23',        vin:700,  cd:500,  tor:7  },
+  { code:'PM24', name:'PLAZA MUSICA MALL ARAUCO CHILLAN PM24',        vin:700,  cd:500,  tor:7  },
+  { code:'PM25', name:'PLAZA MUSICA PORTAL ÑUÑOA PM25',               vin:700,  cd:500,  tor:7  },
+  { code:'PM26', name:'PLAZA MUSICA PORTAL RANCAGUA PM26',            vin:700,  cd:500,  tor:7  },
+  { code:'PM27', name:'PLAZA MUSICA MALL VIVO SAN FERNANDO PM27',     vin:600,  cd:400,  tor:4  },
+  { code:'PM28', name:'PLAZA MUSICA MALL PASEO PUERTO VARAS PM28',    vin:600,  cd:400,  tor:4  },
+  { code:'PM29', name:'PLAZA MUSICA MALL PLAZA OESTE PM29',           vin:700,  cd:500,  tor:7  },
+  { code:'PM30', name:'PLAZA MUSICA PORTAL OSORNO PM30',              vin:700,  cd:500,  tor:7  },
+  { code:'PM31', name:'PLAZA MUSICA PORTAL TEMUCO PM31',              vin:700,  cd:500,  tor:7  },
+  { code:'PM32', name:'PLAZA MUSICA PORTAL VALDIVIA PM32',            vin:950,  cd:850,  tor:15 },
+  { code:'PM33', name:'PLAZA MUSICA MALL PLAZA IQUIQUE PM33',         vin:700,  cd:500,  tor:7  },
+  { code:'PM34', name:'PLAZA MUSICA MALL PLAZA ARICA PM34',           vin:700,  cd:500,  tor:7  },
+  { code:'PM35', name:'PLAZA MUSICA MALL VIVO CHILLAN PM35',          vin:700,  cd:500,  tor:7  },
+  { code:'PM36', name:'PLAZA MUSICA MALL OPEN LA CALERA PM36',        vin:700,  cd:500,  tor:7  },
+  { code:'PM37', name:'PLAZA MUSICA MALL VIVO LOS TRAPENSES PM37',    vin:700,  cd:500,  tor:7  },
+  { code:'PM38', name:'PLAZA MUSICA MALL OPEN OVALLE PM38',           vin:650,  cd:400,  tor:10 },
+  { code:'PM39', name:'PLAZA MUSICA MALL VIVO COQUIMBO PM39',         vin:700,  cd:500,  tor:7  },
+  { code:'PM40', name:'PLAZA MUSICA MALL PASEO VIÑA CENTRO PM40',     vin:600,  cd:400,  tor:4  },
+  { code:'PM41', name:'PLAZA MUSICA MALL PLAZA SUR PM41',             vin:700,  cd:500,  tor:7  },
+  { code:'PM42', name:'PLAZA MUSICA TURBUS TERMINAL ALAMEDA PM42',    vin:600,  cd:400,  tor:4  },
+  { code:'PM43', name:'PLAZA MUSICA MALL LOS ANGELES PM43',           vin:700,  cd:500,  tor:7  },
+  { code:'PM44', name:'PLAZA MUSICA MALL PLAZA LOS DOMINICOS PM44',   vin:700,  cd:500,  tor:7  },
+  { code:'PM45', name:'PLAZA MUSICA MALL PASEO PUERTO MONTT PM45',    vin:650,  cd:494,  tor:10 },
+  { code:'PM46', name:'PLAZA MUSICA MALL FRANKCLIN PM46',             vin:700,  cd:500,  tor:7  },
+];
+
+// ============================================================
+// STATE
+// ============================================================
+let dataCM = {};      // { barcode: { disponible, nombre, tipo, variante, sku } }
+let dataTienda = {};  // { barcode: { stock, precio, nombre, tipo, variante, sku } }
+let dataPrecios = []; // [ { tipo, barcode, sku, nombre, precio } ]
+let dataGD = {};      // { barcode: qty_en_transito } — from guías de despacho
+let allRows = [];     // processed rows
+let filteredRows = [];
+let currentFilter = 'todos';
+let currentCategoria = '';
+let currentSearch = '';
+let sortKey = null;
+let sortDir = 1;
+let currentPage = 1;
+const PAGE_SIZE = 100;
+let selectedSucursal = null;
+
+// ============================================================
+// INIT
+// ============================================================
+window.onload = () => {
+  const selSup = document.getElementById('selectSupervisor');
+  SUPERVISORES.forEach(sv => {
+    const opt = document.createElement('option');
+    opt.value = sv.name;
+    opt.textContent = sv.name;
+    selSup.appendChild(opt);
+  });
+};
+
+function onSupervisorChange() {
+  const supName = document.getElementById('selectSupervisor').value;
+  const selSuc  = document.getElementById('selectSucursal');
+
+  // Limpiar selector de sucursal
+  selSuc.innerHTML = '';
+
+  if (!supName) {
+    selSuc.innerHTML = '<option value="">— Primero selecciona supervisor —</option>';
+    selSuc.disabled = true;
+    selectedSucursal = null;
+    checkReady();
+    return;
+  }
+
+  // Filtrar sucursales del supervisor seleccionado
+  const supervisor = SUPERVISORES.find(sv => sv.name === supName);
+  const sucursalesDelSup = SUCURSALES
+    .filter(s => supervisor.codes.includes(s.code))
+    .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+
+  const defaultOpt = document.createElement('option');
+  defaultOpt.value = '';
+  defaultOpt.textContent = '— Seleccionar local —';
+  selSuc.appendChild(defaultOpt);
+
+  sucursalesDelSup.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.code;
+    opt.textContent = s.name;
+    selSuc.appendChild(opt);
+  });
+
+  selSuc.disabled = false;
+  selectedSucursal = null;
+  checkReady();
+}
+
+function onSucursalChange() {
+  const code = document.getElementById('selectSucursal').value;
+  selectedSucursal = SUCURSALES.find(s => s.code === code) || null;
+  checkReady();
+}
+
+// ============================================================
+// FILE HANDLING
+// ============================================================
+
+// La lista de precios de Bsale es un HTML disfrazado de .xls.
+// DOMParser la lee directamente → obtenemos el texto exacto de cada celda
+// (ej: "3.990,00" con la coma intacta), sin que parseFloat de JS lo corrompa.
+function parsePreciosHTML(htmlText) {
+  const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+  const tables = doc.querySelectorAll('table');
+  let bigTable = null, maxRows = 0;
+  for (const t of tables) {
+    const n = t.querySelectorAll('tr').length;
+    if (n > maxRows) { maxRows = n; bigTable = t; }
+  }
+  if (!bigTable) return [];
+  return Array.from(bigTable.querySelectorAll('tr')).map(tr =>
+    Array.from(tr.querySelectorAll('td,th')).map(td => td.textContent.trim())
+  );
+}
+
+function handleFile(type, input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  // Lista de precios → leer como HTML con DOMParser (no SheetJS)
+  if (type === 'Precios') {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const rows = parsePreciosHTML(e.target.result);
+        dataPrecios = parseBsalePrecios(rows);
+        const count = dataPrecios.length;
+        setStatus('Precios', `✓ ${count} productos en lista`, 'ok');
+        markCard(4, true);
+        checkReady();
+      } catch (err) {
+        setStatus('Precios', '⚠ Error leyendo lista de precios', 'err');
+        console.error(err);
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+    return;
+  }
+
+  // CM, Tienda, GD → SheetJS (son XLSX reales)
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'binary' });
+      // Seleccionar la pestaña con más filas de datos (Bsale a veces pone metadata en hoja 1)
+      let ws = wb.Sheets[wb.SheetNames[0]];
+      let bestRowCount = 0;
+      for (const sheetName of wb.SheetNames) {
+        const candidate = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: null });
+        if (candidate.length > bestRowCount) {
+          bestRowCount = candidate.length;
+          ws = wb.Sheets[sheetName];
+        }
+      }
+      const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
+
+      if (type === 'CM') {
+        dataCM = parseBsaleStock(data, 'CM');
+        const count = Object.keys(dataCM).length;
+        setStatus('CM', `✓ ${count} productos cargados`, 'ok');
+        markCard(2, true);
+      } else if (type === 'Tienda') {
+        dataTienda = parseBsaleStock(data, 'Tienda');
+        const count = Object.keys(dataTienda).length;
+        setStatus('Tienda', `✓ ${count} productos cargados`, 'ok');
+        markCard(3, true);
+      } else if (type === 'GD') {
+        dataGD = parseBsaleGD(data);
+        const count = Object.keys(dataGD).length;
+        setStatus('GD', `✓ ${count} SKUs en tránsito detectados`, 'ok');
+        markCard(5, true);
+      }
+      checkReady();
+    } catch (err) {
+      setStatus(type, '⚠ Error leyendo archivo – verifica que sea export de Bsale', 'err');
+      console.error(err);
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+// Finds header row index in a Bsale export
+// Estrategia: la fila con más palabras clave de encabezado gana (más robusto ante cambios de Bsale)
+function findHeaderRow(rows) {
+  const keywords = ['barras', 'sku', 'precio', 'producto', 'variante', 'tipo', 'nombre', 'cantidad', 'stock'];
+  let bestIdx = 4;
+  let bestScore = 0;
+  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+    const r = rows[i];
+    if (!r) continue;
+    const cells = r.filter(Boolean).map(c => String(c).toLowerCase());
+    const score = keywords.filter(k => cells.some(c => c.includes(k))).length;
+    if (score > bestScore) {
+      bestScore = score;
+      bestIdx = i;
+    }
+  }
+  return bestIdx;
+}
+
+// Exact or startsWith match to avoid 'tipo de producto' matching 'producto'
+function findColExact(headers, names) {
+  for (const n of names) {
+    const idx = headers.findIndex(h => h === n || h.startsWith(n + ' '));
+    if (idx >= 0) return idx;
+  }
+  // fallback: includes (but exclude if header also contains 'tipo')
+  for (const n of names) {
+    const idx = headers.findIndex(h => h.includes(n) && !h.includes('tipo de'));
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
+// Parses Bsale stock/inventory export
+function parseBsaleStock(rows, mode) {
+  const headerIdx = findHeaderRow(rows);
+  const headers = rows[headerIdx].map(h => h ? String(h).trim().toLowerCase() : '');
+
+  const idxTipo     = findCol(headers, ['tipo de producto', 'tipo de prod']);
+  // 'Producto' column: must not match 'tipo de producto' — use exact/prefix match
+  const idxProd     = findColExact(headers, ['producto', 'nombre', 'producto/servicio']);
+  const idxVariante = findColExact(headers, ['variante']);
+  const idxBarcode  = findCol(headers, ['código barras', 'codigo barras', 'barcode', 'código de barras']);
+  const idxSKU      = findColExact(headers, ['sku']);
+  const idxDisp     = findColExact(headers, ['cantidad disponible']);
+  const idxStock    = idxDisp >= 0 ? idxDisp : findCol(headers, ['stock', 'cantidad']);
+  const idxPrecio   = findCol(headers, ['precio venta bruto', 'precio venta', 'precio']);
+
+  const result = {};
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r || !r.some(c => c !== null && c !== '')) continue;
+
+    const barcode = clean(r[idxBarcode]);
+    const sku     = clean(r[idxSKU]);
+    if (!barcode && !sku) continue;
+
+    const key = barcode || sku;
+    const disponible = num(r[idxStock]);
+
+    const entry = {
+      tipo:      clean(r[idxTipo]),
+      nombre:    idxProd >= 0 ? clean(r[idxProd]) : '',
+      variante:  idxVariante >= 0 ? clean(r[idxVariante]) : '',
+      barcode:   barcode,
+      sku:       sku,
+      stock:     disponible,
+      disponible: disponible,
+      precio:    idxPrecio >= 0 ? num(r[idxPrecio]) : 0,
+    };
+    result[key] = entry;
+    if (sku && sku !== key) result[sku] = entry;
+  }
+  return result;
+}
+
+// Limpia un barcode del HTML de Bsale: ="74861672245238" → 74861672245238
+function cleanBarcode(v) {
+  if (v === null || v === undefined) return '';
+  const s = String(v).trim();
+  const m = s.match(/^="(.+)"$/);
+  return m ? m[1] : s;
+}
+
+// Parses Bsale price list export (leído con DOMParser → texto exacto por celda)
+function parseBsalePrecios(rows) {
+  const headerIdx = findHeaderRow(rows);
+  const headers = rows[headerIdx] ? rows[headerIdx].map(h => h ? String(h).trim().toLowerCase() : '') : [];
+
+  const idxTipo    = findCol(headers, ['tipo de producto', 'tipo de prod', 'tipo']);
+  const idxBarcode = findCol(headers, ['código barras', 'codigo barras', 'código de barras', 'codigo de barras', 'barras', 'barcode']);
+  const idxSKU     = findCol(headers, ['sku']);
+  // En la lista de precios de Bsale, 'variante' contiene el nombre completo del producto
+  const idxNombre  = findColExact(headers, ['variante', 'nombre del producto', 'nombre producto', 'nombre']);
+  const idxPrecio  = findCol(headers, ['precio venta', 'precio venta bruto', 'precio']);
+
+  const result = [];
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r || !r.some(c => c !== null && c !== '')) continue;
+    // cleanBarcode elimina el wrapper ="..." que Bsale usa en el HTML
+    const barcode = cleanBarcode(r[idxBarcode]);
+    const sku     = cleanBarcode(r[idxSKU]);
+    if (!barcode && !sku) continue;
+    // Precio: el texto exacto del HTML es "X.XXX,00" → normalizePrecio devuelve "X.XXX"
+    const precioStr = idxPrecio >= 0 ? normalizePrecio(r[idxPrecio]) : '';
+    result.push({
+      tipo:      clean(r[idxTipo]) || '',
+      barcode:   barcode || '',
+      sku:       sku || '',
+      nombre:    idxNombre >= 0 ? clean(r[idxNombre]) : '',
+      precioStr: precioStr,
+      precio:    num(precioStr) || 0,
+    });
+  }
+  return result;
+}
+
+// Parses Bsale GD (guías de despacho) report — returns { barcode: qty }
+function parseBsaleGD(rows) {
+  const headerIdx = findHeaderRow(rows);
+  if (headerIdx < 0) return {};
+  const headers = rows[headerIdx] ? rows[headerIdx].map(h => h ? String(h).trim().toLowerCase() : '') : [];
+
+  const idxBarcode  = findCol(headers, ['código barras', 'codigo barras', 'barcode']);
+  const idxSKU      = findColExact(headers, ['sku']);
+  const idxCantidad = findColExact(headers, ['cantidad']);
+  const idxDestino  = findCol(headers, ['sucursal de destino', 'destino']);
+
+  const sucNombre = selectedSucursal ? selectedSucursal.name.toUpperCase() : '';
+  const result = {};
+
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r || !r.some(c => c !== null && c !== '')) continue;
+    // If destination column exists, filter by current sucursal
+    if (idxDestino >= 0 && sucNombre) {
+      const dest = clean(r[idxDestino]).toUpperCase();
+      if (!dest.includes(selectedSucursal.code) && !sucNombre.includes(dest.substring(0,10))) continue;
+    }
+    const barcode = clean(r[idxBarcode]);
+    const sku     = clean(r[idxSKU]);
+    const qty     = idxCantidad >= 0 ? num(r[idxCantidad]) : 1;
+    const key     = barcode || sku;
+    if (!key) continue;
+    result[key] = (result[key] || 0) + qty;
+    if (sku && sku !== key) result[sku] = result[key];
+  }
+  return result;
+}
+
+// ============================================================
+// TIPOS DE PRODUCTO EXCLUIDOS
+// ============================================================
+const TIPOS_EXCLUIDOS = new Set([
+  'CUIDADO Y BELLEZA',
+  'ELECTRODOMESTICOS',
+  'FABRICACION',
+  'GUIA HITES',
+  'GUIA JUMBO_SISA_TOTTUS',
+  'GUIA MUNICIPALIDADES',
+  'GUIA PARIS',
+  'JUGUETERIA',
+  'LINEA BLANCA',
+  'MENAJE',
+  'MUEBLES',
+  'PACK OSTER',
+  'SIN TIPO',
+  'VIDEO JUEGOS',
+]);
+
+// ============================================================
+// PROCESS
+// ============================================================
+function processar() {
+  if (!selectedSucursal) { showToast('Selecciona una sucursal primero', 'error'); return; }
+
+  allRows = [];
+
+  // Master: lista de precios — incluye TODOS los productos del catálogo,
+  // incluso los que no están en CM o solo están en sucursal.
+  const seenKeys = new Set();
+  const masterList = [];
+  dataPrecios.forEach(item => {
+    const mainKey = item.barcode || item.sku;
+    if (!mainKey || seenKeys.has(mainKey)) return;
+    seenKeys.add(mainKey);
+    masterList.push(item);
+  });
+
+  masterList.forEach(pItem => {
+    const keyB = pItem.barcode;
+    const keyS = pItem.sku;
+    if (!keyB && !keyS) return;
+
+    const cm  = dataCM[keyB]     || dataCM[keyS]     || null;
+    const tda = dataTienda[keyB] || dataTienda[keyS] || null;
+
+    const stock_cm = cm ? (cm.disponible ?? cm.stock ?? 0) : 0;
+    const stock_t  = tda ? tda.stock : 0;
+
+    // Precio: viene directo del item maestro (lista de precios)
+    const precioStr = pItem.precioStr || '';
+    const precio    = pItem.precio    || 0;
+
+    // Nombre autoritativo: CM > tienda > lista de precios
+    const producto = (cm  ? cm.nombre  : '')
+                  || (tda ? tda.nombre : '')
+                  || pItem.nombre
+                  || keyB || keyS;
+
+    const barcode_val = pItem.barcode || (cm ? cm.barcode : '') || keyB;
+    const sku_val     = pItem.sku     || (cm ? cm.sku     : '') || keyS;
+
+    const tipo_val = (cm  ? cm.tipo  : '')
+                  || pItem.tipo
+                  || (tda ? tda.tipo : '') || '';
+
+    const categoria = clasificar(producto, tipo_val);
+
+    if (TIPOS_EXCLUIDOS.has(tipo_val.trim().toUpperCase())) return;
+
+    const en_transito = dataGD[barcode_val] || dataGD[sku_val] || null;
+
+    allRows.push({
+      barcode:     barcode_val,
+      sku:         sku_val,
+      nombre:      producto,
+      tipo:        tipo_val,
+      categoria:   categoria,
+      precio:      precio,
+      precioStr:   precioStr,
+      stock_cm:    stock_cm,
+      stock_t:     stock_t,
+      qty:         0,
+      checked:     false,
+      en_transito: en_transito,
+    });
+  });
+
+  // Ordenar A-Z por nombre de producto
+  allRows.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+
+  applyFiltersAndRender();
+  updateStats();
+  renderCubicaje();
+  document.getElementById('summarySection').className = 'summary visible';
+  document.getElementById('summaryTitle').textContent = `Pedido – ${selectedSucursal.name}`;
+  showToast(`✓ ${allRows.length} productos procesados`, 'success');
+}
+
+// ============================================================
+// CLASSIFICATION
+// ============================================================
+function clasificar(nombre, tipo) {
+  // El nombre debe COMENZAR con la categoría para evitar falsos positivos
+  // "PUA TORNAMESA" → OTRO  |  "LIMPIA VINILOS" → OTRO  |  "TORNAMESA CROSLEY" → TOR
+  const n = nombre.trim().toUpperCase();
+  const t = tipo.trim().toUpperCase();
+
+  if (n.startsWith('VINILO') || n.startsWith('1LP ') || n.startsWith('2LP ') || n.startsWith('3LP ') || n.startsWith('4LP ')) return 'VIN';
+  if (n.startsWith('CD ') || n.startsWith('CD/') || t === 'CD') return 'CD';
+  if (n.startsWith('TORNAMESA') || n.startsWith('TOCADISCO') || n.startsWith('TURNTABLE') || n.startsWith('GIRADISCO')) return 'TOR';
+  return 'OTRO';
+}
+
+// ============================================================
+// FILTERS & RENDER
+// ============================================================
+function setFilter(f, btn) {
+  currentFilter = f;
+  currentPage = 1;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFiltersAndRender();
+}
+function setCategoria(v) { currentCategoria = v; currentPage = 1; applyFiltersAndRender(); }
+function onSearch() { currentSearch = document.getElementById('searchBox').value.toLowerCase(); currentPage = 1; applyFiltersAndRender(); }
+
+function applyFiltersAndRender() {
+  filteredRows = allRows.filter(r => {
+    if (currentFilter === 'pedir' && r.qty <= 0) return false;
+    if (currentFilter === 'sin_cm' && r.stock_cm !== null && r.stock_cm > 0) return false;
+    if (currentFilter === 'sin_cm' && r.stock_cm === null) return true;
+    if (currentCategoria && r.categoria !== currentCategoria) return false;
+    if (currentSearch && !r.nombre.toLowerCase().includes(currentSearch) && !r.barcode.includes(currentSearch)) return false;
+    return true;
+  });
+
+  if (sortKey) {
+    filteredRows.sort((a,b) => {
+      let va = a[sortKey] ?? -Infinity;
+      let vb = b[sortKey] ?? -Infinity;
+      return (va < vb ? -1 : va > vb ? 1 : 0) * sortDir;
+    });
+  }
+
+  renderPage();
+}
+
+function sortTable(key) {
+  if (sortKey === key) sortDir *= -1;
+  else { sortKey = key; sortDir = 1; }
+  applyFiltersAndRender();
+}
+
+function renderPage() {
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageRows = filteredRows.slice(start, start + PAGE_SIZE);
+  const tbody = document.getElementById('tableBody');
+
+  if (filteredRows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="no-data">No hay productos con este filtro</td></tr>';
+    document.getElementById('pagination').innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = pageRows.map((r, localIdx) => {
+    const globalIdx = allRows.indexOf(r);
+    const catBadge = r.categoria === 'VIN' ? 'badge-vin' :
+                     r.categoria === 'CD'  ? 'badge-cd' :
+                     r.categoria === 'TOR' ? 'badge-tor' : 'badge-other';
+    const cmClass  = r.stock_cm === null ? 'stock-cm stock-zero' : r.stock_cm === 0 ? 'stock-cm stock-zero' : 'stock-cm';
+    const cmVal    = r.stock_cm === null ? 'N/D' : r.stock_cm;
+    const tdaClass = r.stock_t === 0 ? 'stock-t stock-zero' : 'stock-t';
+    const rowClass = r.qty > 0 ? 'pedido-row' : '';
+    const qtyClass = r.qty > 0 ? 'qty-input has-value' : 'qty-input';
+    const precio   = r.precioStr ? '$' + r.precioStr : '';
+
+    const transVal = r.en_transito > 0 ? `<span style="color:#4361ee;font-weight:700">${r.en_transito}</span>` : '<span style="color:#ddd">—</span>';
+    return `<tr class="${rowClass}" id="row_${globalIdx}">
+      <td><input type="checkbox" ${r.checked ? 'checked' : ''} onchange="toggleRow(${globalIdx}, this)"></td>
+      <td style="font-size:0.72rem;color:#555;white-space:nowrap">${r.tipo}</td>
+      <td style="font-size:0.72rem;color:#555;font-family:monospace">${r.barcode}</td>
+      <td style="font-size:0.72rem;color:#888;font-family:monospace">${r.sku}</td>
+      <td class="producto-name" title="${r.nombre}">${r.nombre.length > 50 ? r.nombre.substring(0,50)+'…' : r.nombre}</td>
+      <td class="precio">${precio}</td>
+      <td class="${cmClass}">${cmVal}</td>
+      <td class="${tdaClass}">${r.stock_t > 0 ? r.stock_t : ''}</td>
+      <td><input class="${qtyClass}" type="number" min="0" value="${r.qty || ''}"
+          onchange="updateQty(${globalIdx}, this)" oninput="updateQty(${globalIdx}, this)"
+          placeholder="0"></td>
+      <td>${transVal}</td>
+    </tr>`;
+  }).join('');
+
+  renderPagination();
+}
+
+function renderPagination() {
+  const total = filteredRows.length;
+  const pages = Math.ceil(total / PAGE_SIZE);
+  if (pages <= 1) { document.getElementById('pagination').innerHTML = `<span class="page-info">Mostrando ${total} productos</span>`; return; }
+
+  let html = `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`;
+  for (let p = 1; p <= pages; p++) {
+    if (p === 1 || p === pages || Math.abs(p - currentPage) <= 2) {
+      html += `<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+    } else if (Math.abs(p - currentPage) === 3) {
+      html += `<span style="padding:0 4px;color:#aaa">…</span>`;
+    }
+  }
+  html += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===pages?'disabled':''}>›</button>`;
+  html += `<span class="page-info">${(currentPage-1)*PAGE_SIZE+1}–${Math.min(currentPage*PAGE_SIZE,total)} de ${total}</span>`;
+  document.getElementById('pagination').innerHTML = html;
+}
+
+function goPage(p) { currentPage = p; renderPage(); window.scrollTo(0, document.getElementById('resultTable').offsetTop - 80); }
+
+// ============================================================
+// INTERACTIONS
+// ============================================================
+function toggleRow(idx, cb) {
+  allRows[idx].checked = cb.checked;
+  if (!cb.checked) {
+    allRows[idx].qty = 0;
+    const input = document.querySelector(`#row_${idx} .qty-input`);
+    if (input) { input.value = 0; input.className = 'qty-input'; }
+    document.getElementById(`row_${idx}`).className = '';
+  }
+  updateStats();
+}
+
+function updateQty(idx, input) {
+  const v = parseInt(input.value) || 0;
+  allRows[idx].qty = v;
+  allRows[idx].checked = v > 0;
+  input.className = v > 0 ? 'qty-input has-value' : 'qty-input';
+  document.getElementById(`row_${idx}`).className = v > 0 ? 'pedido-row' : '';
+  updateStats();
+}
+
+function toggleAll(cb) {
+  filteredRows.forEach(r => {
+    r.checked = cb.checked;
+    if (!cb.checked) r.qty = 0;
+  });
+  renderPage();
+  updateStats();
+}
+
+// ============================================================
+// STATS & CUBICAJE
+// ============================================================
+function updateStats() {
+  const total   = allRows.length;
+  const sinCM   = allRows.filter(r => r.stock_cm === null || r.stock_cm === 0).length;
+  const sinTda  = allRows.filter(r => r.stock_t === 0 && r.stock_cm > 0).length;
+  const unidades = allRows.reduce((s,r) => s + (r.qty || 0), 0);
+  document.getElementById('statTotal').textContent    = total;
+  document.getElementById('statSinCM').textContent    = sinCM;
+  document.getElementById('statSinStock').textContent = sinTda;
+  document.getElementById('statUnidades').textContent = unidades;
+}
+
+function renderCubicaje() {
+  if (!selectedSucursal) return;
+  const s = selectedSucursal;
+
+  // Cubicaje: sumar TODO el stock de tienda (no solo lo que cruzó con CM)
+  // porque refleja el uso físico real del espacio
+  let localVin = 0, localCD = 0, localTOR = 0;
+  const seenCub = new Set();
+  Object.entries(dataTienda).forEach(([key, item]) => {
+    const mainKey = item.barcode || item.sku;
+    if (!mainKey || seenCub.has(mainKey)) return; // de-duplicar
+    seenCub.add(mainKey);
+    const cat = clasificar(item.nombre || '', item.tipo || '');
+    const stk = item.stock || 0;
+    if (cat === 'VIN') localVin += stk;
+    else if (cat === 'CD') localCD += stk;
+    else if (cat === 'TOR') localTOR += stk;
+  });
+
+  const items = [
+    { label: 'VINILOS', local: localVin, cubica: s.vin },
+    { label: 'CDs',     local: localCD,  cubica: s.cd  },
+    { label: 'TOCA',    local: localTOR, cubica: s.tor },
+  ];
+
+  document.getElementById('cubicajeGrid').innerHTML = items.map(item => {
+    const pct = item.cubica > 0 ? Math.min(100, Math.round(item.local / item.cubica * 100)) : 0;
+    const barClass = pct < 70 ? '' : pct < 90 ? 'warn' : 'bad';
+    const dif = item.local - item.cubica;
+    const difStr = dif >= 0 ? `+${dif}` : `${dif}`;
+    return `<div class="cub-item">
+      <div class="cub-label">${item.label}</div>
+      <div class="cub-bar-wrap"><div class="cub-bar ${barClass}" style="width:${pct}%"></div></div>
+      <div class="cub-nums"><strong>${item.local}</strong> / ${item.cubica} (${difStr})</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('cubicajeSection').style.display = 'block';
+}
+
+// ============================================================
+// EXPORT
+// ============================================================
+function exportExcel() {
+  if (allRows.length === 0) { showToast('Genera el pedido primero', 'error'); return; }
+
+  // Header info rows (like original planilla)
+  const suc = selectedSucursal;
+  const fecha = new Date().toLocaleDateString('es-CL');
+
+  // Calculate LOCAL stock totals for the info block
+  const localVin = allRows.filter(r => r.categoria === 'VIN').reduce((s,r) => s + r.stock_t, 0);
+  const localCD  = allRows.filter(r => r.categoria === 'CD').reduce((s,r) => s + r.stock_t, 0);
+  const localTOR = allRows.filter(r => r.categoria === 'TOR').reduce((s,r) => s + r.stock_t, 0);
+
+  // Build rows — store barcodes/SKUs as strings to prevent Excel scientific notation
+  const dataRows = allRows.map(r => {
+    // Precio: texto tal como viene de la lista de precios, o "$-" si no hay
+    const precioFmt = r.precioStr ? `$${r.precioStr}` : '$-';
+
+    // Col J (en tránsito): from GD data
+    const transito = r.en_transito > 0 ? r.en_transito : '';
+
+    return [
+      r.tipo     || '',           // A: Tipo de producto
+      r.barcode  || '',           // B: Código Barras → forzado a texto abajo
+      r.sku      || '',           // C: SKU → forzado a texto abajo
+      r.nombre   || '',           // D: Producto (nombre)
+      precioFmt,                  // E: Precio Venta ($X.XXX or $-)
+      r.stock_cm !== null ? r.stock_cm : '',  // F: Stock CM
+      r.stock_t  > 0 ? r.stock_t : '',        // G: Stock Tienda
+      r.qty      > 0 ? r.qty     : '',        // H: pedido
+      null,                       // I: fórmula =SI(H{n}="","",C{n}) — se escribe abajo
+      transito,                   // J: en tránsito
+    ];
+  });
+
+  const wsData = [
+    // Info block (rows 1-4)
+    ['Sucursal:',             suc ? suc.name : '',   null, null, null, 'VINILO', 'CD', 'TORNAMESA', null, null],
+    ['TIPO LISTA DE PRECIO:', 'TIENDA FISICA A',      null, null, 'LOCAL',  localVin,           localCD,          localTOR,          null, null],
+    [null, null, null, null, 'CUBICA', suc ? suc.vin : null, suc ? suc.cd : null, suc ? suc.tor : null, null, null],
+    [null, null, null, null, 'DIF',
+      suc ? localVin - suc.vin : null,
+      suc ? localCD  - suc.cd  : null,
+      suc ? localTOR - suc.tor : null,
+      null, null],
+    // Column headers (row 5)
+    ['Tipo de producto', 'Código Barras', 'SKU', 'Variante', 'Precio Venta', 'Stock CM', 'Stock Tienda', 'pedido', 'SKU', 'en transito'],
+    // Data rows
+    ...dataRows
+  ];
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Forzar celdas de barcode/SKU como Texto explícito (z:'@' = formato Texto en Excel)
+  // Esto evita que Excel muestre 0 o notación científica al abrir el archivo
+  const dataStartRow = 5;
+  for (let r = dataStartRow; r < wsData.length; r++) {
+    // Col B (índice 1): Código Barras → texto con formato @
+    const bRef = XLSX.utils.encode_cell({r, c: 1});
+    const bVal = wsData[r][1];
+    ws[bRef] = { v: bVal !== null && bVal !== undefined ? String(bVal) : '', t: 's', z: '@' };
+
+    // Col C (índice 2): SKU → texto con formato @
+    const cRef = XLSX.utils.encode_cell({r, c: 2});
+    const cVal = wsData[r][2];
+    ws[cRef] = { v: cVal !== null && cVal !== undefined ? String(cVal) : '', t: 's', z: '@' };
+
+    // Col I (índice 8): fórmula =IF(H{row}="","",C{row})
+    const excelRow = r + 1;
+    const iRef = XLSX.utils.encode_cell({r, c: 8});
+    ws[iRef] = { t: 'f', f: `IF(H${excelRow}="","",C${excelRow})` };
+  }
+
+  // Formato texto también en encabezado fila 5 para cols B y C (evita que Excel re-interprete)
+  ws[XLSX.utils.encode_cell({r:4, c:1})] = { v: 'Código Barras', t: 's' };
+  ws[XLSX.utils.encode_cell({r:4, c:2})] = { v: 'SKU', t: 's' };
+
+  // AutoFilter en fila 5 (headers), columnas A:J
+  ws['!autofilter'] = { ref: 'A5:J5' };
+
+  // Column widths
+  ws['!cols'] = [
+    {wch:18}, // A: Tipo
+    {wch:18}, // B: Código Barras
+    {wch:16}, // C: SKU
+    {wch:65}, // D: Variante/Producto
+    {wch:13}, // E: Precio
+    {wch:10}, // F: Stock CM
+    {wch:12}, // G: Stock Tienda
+    {wch:9},  // H: pedido
+    {wch:16}, // I: SKU dup
+    {wch:12}, // J: en tránsito
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Pedido');
+
+  const dateStr = new Date().toISOString().slice(0,10);
+  const code = suc ? suc.code : 'tienda';
+  XLSX.writeFile(wb, `Pedido_${code}_${dateStr}.xlsx`);
+
+  const conPedido = allRows.filter(r => r.qty > 0).length;
+  showToast(`✓ Exportado: ${allRows.length} productos, ${conPedido} con pedido`, 'success');
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function findCol(headers, names) {
+  for (const n of names) {
+    const idx = headers.findIndex(h => h && h.includes(n));
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+function clean(v) { return v !== null && v !== undefined ? String(v).trim() : ''; }
+
+// Formateador chileno propio: 3990 → "3.990"  (no depende de toLocaleString)
+function formatCLP(n) {
+  return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+// Normaliza precio al string "X.XXX" chileno para mostrar.
+// Con DOMParser el texto exacto del HTML llega acá: "3.990,00" → "3.990"
+// Casos: "3.990,00" → "3.990" | "X.XXX" → "X.XXX" | "3990" → "3.990"
+function normalizePrecio(raw) {
+  if (raw === null || raw === undefined || raw === '') return '';
+  const s = String(raw).trim().replace(/[$\s]/g, '');
+  if (!s || s === '0' || s === '0,00') return '';
+  // Bsale HTML: formato siempre "X.XXX,00" → tomar solo lo anterior a la coma
+  if (s.includes(',')) {
+    const left = s.split(',')[0].trim();
+    return left === '0' ? '' : left;
+  }
+  // Ya tiene formato "X.XXX" → ok
+  if (/^\d{1,3}(\.\d{3})+$/.test(s)) return s;
+  // Entero puro "3990" → formatear
+  if (/^\d+$/.test(s)) return formatCLP(parseInt(s, 10));
+  return '';
+}
+
+function num(v) {
+  if (v === null || v === undefined || v === '') return 0;
+  if (typeof v === 'number' && Number.isInteger(v)) return v;
+  if (typeof v === 'number') return Math.round(v);
+  const s = String(v).trim().replace(/[$\s]/g, '');
+  if (/^\d{1,3}(\.\d{3})*,\d+$/.test(s))
+    return Math.round(parseFloat(s.replace(/\./g, '').replace(',', '.')));
+  if (/^\d{1,3}(\.\d{3})+$/.test(s))
+    return parseInt(s.replace(/\./g, ''), 10);
+  // Número simple
+  const n = parseFloat(s.replace(',', '.').replace(/[^0-9.]/g, ''));
+  return isNaN(n) ? 0 : Math.round(n);
+}
+
+function setStatus(type, msg, cls) {
+  const el = document.getElementById('status' + type);
+  el.textContent = msg;
+  el.className = 'file-status ' + cls;
+}
+function markCard(num, done) {
+  const card = document.getElementById('card' + num);
+  card.classList.remove('active');
+  if (done) card.classList.add('done');
+}
+
+function checkReady() {
+  const ok = selectedSucursal && Object.keys(dataCM).length > 0 && Object.keys(dataTienda).length > 0 && dataPrecios.length > 0;
+  document.getElementById('btnProcess').disabled = !ok;
+  if (selectedSucursal) markCard(1, true);
+}
+
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 2800);
+}
+</script>
+</body>
+</html>

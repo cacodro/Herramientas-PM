@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reposición Jumbo / Santa Isabel</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#ffffff; --border:#dfe3e8; --text:#1f2430; --muted:#6b7280;
+    --primary:#0f62d0; --primary-dark:#0a4aa3; --ok:#1a8754; --warn:#b8860b; --err:#c0392b;
+    --err-bg:#fdecea; --ok-bg:#e9f7ef; --step-inactive:#c7cbd1;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  header{background:var(--primary-dark);color:#fff;padding:18px 24px;}
+  header h1{margin:0;font-size:19px;font-weight:600;}
+  header p{margin:4px 0 0;font-size:13px;color:#cfe0f7;}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 20px 60px;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:16px;}
+  .card h2{font-size:15px;margin:0 0 4px;display:flex;align-items:center;gap:8px;}
+  .card .sub{color:var(--muted);font-size:12.5px;margin:0 0 14px;}
+  .step-badge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--step-inactive);color:#fff;font-size:12px;font-weight:700;flex-shrink:0;}
+  .card.done .step-badge{background:var(--ok);}
+  .card.locked{opacity:.5;pointer-events:none;}
+  .row{display:flex;gap:14px;flex-wrap:wrap;}
+  .field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:180px;}
+  .field label{font-size:12.5px;font-weight:600;color:#374151;}
+  input[type=text],input[type=date],input[type=number],select,textarea{
+    padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13.5px;background:#fff;color:var(--text);
+  }
+  textarea{font-family:monospace;font-size:12.5px;min-height:90px;resize:vertical;}
+  .file-drop{border:1.5px dashed var(--border);border-radius:8px;padding:12px;background:#fafbfc;flex:1;min-width:220px;}
+  .file-drop label{font-size:12.5px;font-weight:600;color:#374151;display:block;margin-bottom:6px;}
+  .file-drop input[type=file]{width:100%;font-size:12.5px;}
+  .file-status{font-size:12px;margin-top:6px;min-height:16px;}
+  .file-status.ok{color:var(--ok);}
+  .file-status.err{color:var(--err);}
+  .file-status.pending{color:var(--muted);}
+  button{cursor:pointer;border:none;border-radius:6px;font-size:13.5px;font-weight:600;padding:9px 16px;transition:background .15s;}
+  button.primary{background:var(--primary);color:#fff;}
+  button.primary:hover{background:var(--primary-dark);}
+  button.secondary{background:#eef1f5;color:#374151;}
+  button.secondary:hover{background:#e2e6eb;}
+  button.danger{background:var(--err-bg);color:var(--err);}
+  button:disabled{opacity:.45;cursor:not-allowed;}
+  .btn-row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;align-items:center;}
+  .catalog-status{display:flex;align-items:center;gap:12px;background:var(--ok-bg);border:1px solid #bfe3cc;border-radius:8px;padding:12px 14px;margin-bottom:12px;}
+  .catalog-status .ico{font-size:20px;}
+  .catalog-status .txt strong{display:block;font-size:13.5px;}
+  .catalog-status .txt span{font-size:12px;color:var(--muted);}
+  .catalog-status.stale{background:#fff8e6;border-color:#f0d99a;}
+  .hint{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.4;}
+  .warn-box{background:#fff8e6;border:1px solid #f0d99a;border-radius:8px;padding:10px 12px;font-size:12.5px;color:#8a6d1a;margin-bottom:12px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{position:sticky;top:0;background:#f8f9fb;border-bottom:2px solid var(--border);text-align:left;padding:8px 10px;font-size:12px;color:#4b5563;z-index:2;}
+  thead th.sortable{cursor:pointer;user-select:none;}
+  thead th.sortable:hover{color:var(--primary);}
+  thead th.sortable.active{color:var(--primary);}
+  .sort-arrow{font-size:10px;}
+  tbody td{padding:6px 10px;border-bottom:1px solid #eef0f2;vertical-align:middle;}
+  tbody tr:hover{background:#f8fbff;}
+  tbody tr.not-found{background:#fdecea;}
+  tbody tr.not-found:hover{background:#fbdedb;}
+  .table-scroll{max-height:520px;overflow:auto;border:1px solid var(--border);border-radius:8px;}
+  .qty-input{width:70px;padding:5px 6px;text-align:right;font-weight:600;}
+  .tag{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:10px;background:#eef1f5;color:#4b5563;font-weight:600;}
+  .tag.miss{background:var(--err-bg);color:var(--err);}
+  .price-note{font-size:10.5px;color:var(--muted);}
+  .toolbar{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center;}
+  .toolbar input[type=text]{min-width:240px;}
+  .summary{display:flex;gap:24px;margin-top:12px;flex-wrap:wrap;}
+  .summary .box{background:#f8f9fb;border:1px solid var(--border);border-radius:8px;padding:10px 16px;min-width:140px;}
+  .summary .box .n{font-size:19px;font-weight:700;}
+  .summary .box .l{font-size:11.5px;color:var(--muted);}
+  .bucket-summary{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .bucket-box{background:#f8f9fb;border:1px solid var(--border);border-radius:8px;padding:7px 12px;min-width:90px;text-align:center;}
+  .bucket-box .n{font-size:15px;font-weight:700;}
+  .bucket-box .l{font-size:10.5px;color:var(--muted);margin-top:2px;}
+  .autocomplete{position:relative;flex:2;min-width:260px;}
+  .ac-list{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:6px;max-height:220px;overflow:auto;z-index:10;box-shadow:0 6px 16px rgba(0,0,0,.08);display:none;}
+  .ac-list div{padding:7px 10px;font-size:12.5px;cursor:pointer;border-bottom:1px solid #f1f2f4;}
+  .ac-list div:hover{background:#eef4fd;}
+  .ac-list .ac-empty{color:var(--muted);cursor:default;}
+  .small-muted{font-size:11.5px;color:var(--muted);}
+  .flex-between{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+  .log{font-family:monospace;font-size:11.5px;background:#0f1720;color:#c9d1d9;border-radius:8px;padding:10px 12px;max-height:140px;overflow:auto;margin-top:10px;display:none;}
+  .log.show{display:block;}
+  .log .l-ok{color:#7ee787;}
+  .log .l-err{color:#ff7b72;}
+  .log .l-warn{color:#e3b341;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Reposición Jumbo / Santa Isabel</h1>
+  <p>Herramienta local, sin servidor — los archivos no salen de este navegador.</p>
+</header>
+
+<div class="wrap">
+
+  <!-- PASO 1: CATALOGO -->
+  <div class="card" id="cardCatalogo">
+    <h2><span class="step-badge">1</span> Catálogo base</h2>
+    <p class="sub">Stock Casa Matriz + Listas de precio Jumbo/Santa Isabel (CARO y BARATO). Se guardan en este navegador para no tener que volver a subirlos cada visita.</p>
+
+    <div id="catalogCachedBox" style="display:none;"></div>
+
+    <div id="catalogUploadBox">
+      <div class="row">
+        <div class="file-drop">
+          <label>Stock Casa Matriz (.xlsx)</label>
+          <input type="file" id="fileStockCM" accept=".xlsx,.xls">
+          <div class="file-status pending" id="statusStockCM">Sin cargar</div>
+        </div>
+        <div class="file-drop">
+          <label>Lista de precio CARO (.xls Bsale)</label>
+          <input type="file" id="fileCaro" accept=".xls,.xlsx,.html">
+          <div class="file-status pending" id="statusCaro">Sin cargar</div>
+        </div>
+        <div class="file-drop">
+          <label>Lista de precio BARATO (.xls Bsale)</label>
+          <input type="file" id="fileBarato" accept=".xls,.xlsx,.html">
+          <div class="file-status pending" id="statusBarato">Sin cargar</div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="primary" id="btnProcesarCatalogo" disabled>Procesar catálogo</button>
+        <span class="small-muted" id="catalogProcMsg"></span>
+      </div>
+      <div class="log" id="catalogLog"></div>
+    </div>
+  </div>
+
+  <!-- PASO 2: VISITA -->
+  <div class="card locked" id="cardVisita">
+    <h2><span class="step-badge">2</span> Datos de la visita</h2>
+    <p class="sub">Se usan para el nombre del archivo del pedido.</p>
+    <div class="row">
+      <div class="field">
+        <label>Cadena</label>
+        <select id="inpCadena">
+          <option value="Jumbo">Jumbo</option>
+          <option value="Santa Isabel">Santa Isabel</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Local / Sucursal</label>
+        <input type="text" id="inpLocal" placeholder="Ej: Jumbo Kennedy">
+      </div>
+      <div class="field">
+        <label>Fecha visita</label>
+        <input type="date" id="inpFecha">
+      </div>
+    </div>
+  </div>
+
+  <!-- PASO 3: STOCK LOCAL -->
+  <div class="card locked" id="cardLocal">
+    <h2><span class="step-badge">3</span> Stock del local (inventario escaneado)</h2>
+    <p class="sub">Cada código escaneado = 1 unidad. Si el mismo código aparece 2 veces, se suman 2 unidades. Formato aún no confirmado — puedes subir el archivo o pegar los códigos manualmente.</p>
+
+    <div class="warn-box">⚠ Sección provisional: aún no tenemos un archivo de ejemplo real del inventario de local. Cuando lo tengas, súbelo aquí y ajustamos el parser si hace falta.</div>
+
+    <div class="row">
+      <div class="file-drop">
+        <label>Archivo de inventario (.xlsx / .csv / .xls)</label>
+        <input type="file" id="fileLocal" accept=".xlsx,.xls,.csv,.txt">
+        <div class="file-status pending" id="statusLocal">Sin cargar</div>
+      </div>
+      <div class="field" style="flex:2;min-width:280px;">
+        <label>...o pega la lista de códigos de barra (uno por línea)</label>
+        <textarea id="inpLocalPaste" placeholder="7798093713053&#10;7798093713053&#10;081227971007&#10;..."></textarea>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="primary" id="btnProcesarLocal">Leer stock del local</button>
+      <span class="small-muted" id="localProcMsg"></span>
+    </div>
+  </div>
+
+  <!-- PASO 4: TABLA -->
+  <div class="card locked" id="cardTabla">
+    <div class="flex-between">
+      <h2><span class="step-badge">4</span> Pedido de reposición</h2>
+      <button class="secondary" id="btnNuevoLocal">↺ Nuevo local (mantiene catálogo)</button>
+    </div>
+    <p class="sub" id="priceNote">Se muestra todo el catálogo con stock en Casa Matriz. El stock local se completa con lo escaneado en el Paso 3. Ingresa manualmente la cantidad a pedir por producto.</p>
+
+    <div class="toolbar">
+      <select id="inpTipoFiltro">
+        <option value="">Todos los tipos</option>
+      </select>
+      <input type="text" id="inpBuscar" placeholder="Buscar producto o código de barras...">
+    </div>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Barra</th>
+            <th class="sortable" data-sort="producto">Producto <span class="sort-arrow" id="arrow-producto"></span></th>
+            <th class="sortable" data-sort="precioCaro">Precio Caro <span class="sort-arrow" id="arrow-precioCaro"></span></th>
+            <th class="sortable" data-sort="precioBarato">Precio Barato <span class="sort-arrow" id="arrow-precioBarato"></span></th>
+            <th class="sortable" data-sort="stockCM">Stock Casa Matriz <span class="sort-arrow" id="arrow-stockCM"></span></th>
+            <th>Stock Local</th>
+            <th>Pedido</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbodyPedido"></tbody>
+      </table>
+    </div>
+
+    <div class="summary">
+      <div class="box"><div class="n" id="sumProductos">0</div><div class="l">Productos en tabla</div></div>
+      <div class="box"><div class="n" id="sumUnidades">0</div><div class="l">Unidades a pedir</div></div>
+    </div>
+
+    <div class="bucket-summary" id="bucketSummary"></div>
+
+    <div class="btn-row">
+      <button class="primary" id="btnExportar">⬇ Descargar matriz de reposición</button>
+      <span class="small-muted" id="exportMsg"></span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* =========================================================
+   UTILIDADES
+   ========================================================= */
+const LS_KEY = "repoJumboSisaCatalogV1";
+
+function cleanBsaleCode(txt){
+  // Bsale exporta el código como ="12345678" (texto literal, no fórmula real)
+  return String(txt||"").trim().replace(/^="?/, "").replace(/"?$/, "").trim();
+}
+function parsePriceCLP(txt){
+  // formato "9.990,00" -> 9990 ; "0,00" -> 0
+  const t = String(txt||"").trim().replace(/\./g,"").replace(",",".");
+  const n = parseFloat(t);
+  return isNaN(n) ? 0 : n;
+}
+function normBarcode(bc){
+  const s = String(bc||"").trim();
+  const stripped = s.replace(/^0+/, "");
+  return stripped === "" ? "0" : stripped;
+}
+function esc(txt){
+  // Escapa texto antes de insertarlo con innerHTML (nombres de producto pueden traer < > & etc, ej: "KIN (<-->)")
+  return String(txt==null?"":txt).replace(/[&<>"']/g, c => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+  }[c]));
+}
+function fmtCLP(n){
+  return "$" + Math.round(n).toLocaleString("es-CL");
+}
+function todayISO(){
+  const d = new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function fmtDateTime(iso){
+  const d = new Date(iso);
+  return d.toLocaleString("es-CL", {day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+}
+function readFileAsText(file){
+  return new Promise((resolve,reject)=>{
+    const r = new FileReader();
+    r.onload = ()=>resolve(r.result);
+    r.onerror = reject;
+    r.readAsText(file, "UTF-8");
+  });
+}
+function readFileAsArrayBuffer(file){
+  return new Promise((resolve,reject)=>{
+    const r = new FileReader();
+    r.onload = ()=>resolve(r.result);
+    r.onerror = reject;
+    r.readAsArrayBuffer(file);
+  });
+}
+async function sniffFileKind(file){
+  // Determina si el archivo es xlsx binario (zip "PK") o texto/HTML
+  const buf = await file.slice(0,4).arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  if(bytes[0]===0x50 && bytes[1]===0x4B) return "zip"; // xlsx/xlsm real
+  return "text";
+}
+
+function log(el, msg, cls){
+  el.classList.add("show");
+  const line = document.createElement("div");
+  if(cls) line.className = cls;
+  line.textContent = msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+/* =========================================================
+   PARSER: Listas de precio Bsale (HTML disfrazado de .xls)
+   Estructura validada: 2 <table>, la segunda con thead
+   [Tipo de producto, Código Barras, SKU, Variante, Precio Venta]
+   ========================================================= */
+function parseBsalePriceList(htmlText){
+  const doc = new DOMParser().parseFromString(htmlText, "text/html");
+  const tables = Array.from(doc.querySelectorAll("table"));
+  let dataTable = null;
+  for(const t of tables){
+    const headText = t.querySelector("thead") ? t.querySelector("thead").textContent : "";
+    if(headText.includes("Código Barras")){ dataTable = t; break; }
+  }
+  if(!dataTable) throw new Error("No se encontró la tabla de productos (¿es realmente un archivo de precios Bsale?)");
+
+  const rows = Array.from(dataTable.querySelectorAll("tbody tr"));
+  const out = [];
+  for(const tr of rows){
+    const tds = tr.querySelectorAll("td");
+    if(tds.length < 5) continue;
+    const tipoProducto = tds[0].textContent.trim();
+    const barcode = cleanBsaleCode(tds[1].textContent);
+    const variante = tds[3].textContent.trim();
+    const precio = parsePriceCLP(tds[4].textContent);
+    if(!barcode) continue;
+    out.push({barcode, tipoProducto, producto: variante, precio});
+  }
+  return out;
+}
+
+/* =========================================================
+   PARSER: Stock Casa Matriz (.xlsx nativo)
+   Header no está en la fila 1: se busca dinámicamente.
+   ========================================================= */
+function parseCasaMatrizXlsx(arrayBuffer){
+  const wb = XLSX.read(arrayBuffer, {type:"array"});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:""});
+
+  let headerIdx = -1, headerRow = null;
+  for(let i=0;i<Math.min(rows.length,20);i++){
+    if(rows[i].some(c => String(c).trim() === "Código Barras")){
+      headerIdx = i; headerRow = rows[i]; break;
+    }
+  }
+  if(headerIdx === -1) throw new Error("No se encontró la fila de encabezado 'Código Barras' en el archivo de Stock Casa Matriz.");
+
+  const colIdx = {};
+  headerRow.forEach((h,i)=>{ colIdx[String(h).trim()] = i; });
+  const need = ["Tipo de Producto","Producto","Código Barras","SKU","Stock"];
+  for(const n of need){ if(!(n in colIdx)) throw new Error("Falta la columna '"+n+"' en Stock Casa Matriz."); }
+
+  const out = [];
+  for(let i=headerIdx+1;i<rows.length;i++){
+    const r = rows[i];
+    if(!r || r.every(c=>c==="" || c===undefined || c===null)) continue;
+    const rawBarcode = r[colIdx["Código Barras"]];
+    const rawSku = r[colIdx["SKU"]];
+    if(rawBarcode === "" || rawBarcode === undefined) continue;
+    // Nota: si el código de barras viene como número en Excel, un 0 inicial puede
+    // haberse perdido en el archivo fuente. El SKU (texto) a veces lo conserva,
+    // por eso se usa también como respaldo para el índice normalizado.
+    const barcode = String(rawBarcode).trim();
+    const skuText = String(rawSku||"").trim();
+    const marca = colIdx["Marca"]!==undefined ? String(r[colIdx["Marca"]]||"").trim() : "";
+    out.push({
+      barcode,
+      skuText,
+      producto: String(r[colIdx["Producto"]]||"").trim() + (r[colIdx["Variante"]] ? " " + String(r[colIdx["Variante"]]).trim() : ""),
+      tipoProducto: String(r[colIdx["Tipo de Producto"]]||"").trim(),
+      marca,
+      stock: Number(r[colIdx["Stock"]]) || 0
+    });
+  }
+  return out;
+}
+
+/* =========================================================
+   CATALOGO: fusión Caro + Barato + Stock Casa Matriz
+   Índice de respaldo por código sin ceros iniciales (solo si
+   no hay ambigüedad) para recuperar códigos truncados por Excel.
+   ========================================================= */
+function buildCatalog(caroRows, baratoRows, cmRows){
+  const catalog = new Map(); // barcode -> entry
+
+  for(const r of caroRows){
+    catalog.set(r.barcode, {
+      barcode: r.barcode, producto: r.producto, tipoProducto: r.tipoProducto,
+      marca: "", precioCaro: r.precio, precioBarato: 0, stockCM: 0
+    });
+  }
+  for(const r of baratoRows){
+    const e = catalog.get(r.barcode);
+    if(e){ e.precioBarato = r.precio; }
+    else{
+      catalog.set(r.barcode, {
+        barcode: r.barcode, producto: r.producto, tipoProducto: r.tipoProducto,
+        marca: "", precioCaro: 0, precioBarato: r.precio, stockCM: 0
+      });
+    }
+  }
+
+  // índice normalizado (sin ceros iniciales) para resolver códigos truncados
+  const normIndex = new Map();
+  for(const [bc] of catalog){
+    const n = normBarcode(bc);
+    if(!normIndex.has(n)) normIndex.set(n, []);
+    normIndex.get(n).push(bc);
+  }
+  function resolve(bc){
+    if(catalog.has(bc)) return bc;
+    const n = normBarcode(bc);
+    const cands = normIndex.get(n);
+    if(cands && cands.length === 1) return cands[0];
+    return null;
+  }
+
+  let cmMatched = 0, cmUnmatched = 0, cmFixedByNorm = 0;
+  for(const r of cmRows){
+    let target = resolve(r.barcode);
+    if(!target && r.skuText) target = resolve(r.skuText);
+    if(target){
+      if(target !== r.barcode) cmFixedByNorm++;
+      const e = catalog.get(target);
+      e.stockCM = r.stock;
+      e.marca = r.marca || e.marca;
+      cmMatched++;
+    } else {
+      // producto de Casa Matriz que no está en las listas de precio: se agrega igual
+      catalog.set(r.barcode, {
+        barcode: r.barcode, producto: r.producto, tipoProducto: r.tipoProducto,
+        marca: r.marca, precioCaro: 0, precioBarato: 0, stockCM: r.stock
+      });
+      const n = normBarcode(r.barcode);
+      if(!normIndex.has(n)) normIndex.set(n, []);
+      normIndex.get(n).push(r.barcode);
+      cmUnmatched++;
+    }
+  }
+
+  return {catalog, normIndex, stats:{
+    totalCatalogo: catalog.size,
+    cmMatched, cmUnmatched, cmFixedByNorm,
+    caroCount: caroRows.length, baratoCount: baratoRows.length, cmCount: cmRows.length
+  }};
+}
+
+function catalogLookup(state, barcode){
+  if(state.catalog.has(barcode)) return state.catalog.get(barcode);
+  const n = normBarcode(barcode);
+  const cands = state.normIndex.get(n);
+  if(cands && cands.length === 1) return state.catalog.get(cands[0]);
+  return null;
+}
+
+/* =========================================================
+   CACHE localStorage
+   ========================================================= */
+function saveCatalogCache(state, fileNames){
+  try{
+    const entries = [];
+    for(const [bc, e] of state.catalog){
+      entries.push([bc, e.producto, e.tipoProducto, e.marca, e.precioCaro, e.precioBarato, e.stockCM]);
+    }
+    const payload = {
+      builtAt: new Date().toISOString(),
+      fileNames,
+      stats: state.stats,
+      entries
+    };
+    localStorage.setItem(LS_KEY, JSON.stringify(payload));
+    return true;
+  }catch(err){
+    console.warn("No se pudo guardar el catálogo en caché:", err);
+    return false;
+  }
+}
+function loadCatalogCache(){
+  const raw = localStorage.getItem(LS_KEY);
+  if(!raw) return null;
+  try{
+    const payload = JSON.parse(raw);
+    const catalog = new Map();
+    for(const [bc, producto, tipoProducto, marca, precioCaro, precioBarato, stockCM] of payload.entries){
+      catalog.set(bc, {barcode:bc, producto, tipoProducto, marca, precioCaro, precioBarato, stockCM});
+    }
+    const normIndex = new Map();
+    for(const [bc] of catalog){
+      const n = normBarcode(bc);
+      if(!normIndex.has(n)) normIndex.set(n, []);
+      normIndex.get(n).push(bc);
+    }
+    return {catalog, normIndex, stats: payload.stats, builtAt: payload.builtAt, fileNames: payload.fileNames};
+  }catch(err){
+    console.warn("Caché de catálogo corrupta, se ignora.", err);
+    return null;
+  }
+}
+
+/* =========================================================
+   PARSER: Stock del local (formato aún no confirmado)
+   Heurística: busca columna con "barra"/"codigo" en el header;
+   si no hay header reconocible, usa la primera columna.
+   Cada fila = 1 unidad (se tallean duplicados).
+   ========================================================= */
+function tallyBarcodes(list){
+  const tally = new Map();
+  for(let raw of list){
+    const bc = String(raw||"").trim().replace(/^="?/, "").replace(/"?$/, "").trim();
+    if(!bc) continue;
+    if(!/[0-9]{4,}/.test(bc)) continue; // descarta basura que no parece código
+    tally.set(bc, (tally.get(bc)||0) + 1);
+  }
+  return tally;
+}
+
+async function parseLocalStockFile(file){
+  const kind = await sniffFileKind(file);
+  if(kind === "zip"){
+    const buf = await readFileAsArrayBuffer(file);
+    const wb = XLSX.read(buf, {type:"array"});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, defval:""});
+    return extractBarcodesFromRows(rows);
+  } else {
+    const text = await readFileAsText(file);
+    if(text.trim().startsWith("<")){
+      // por si el local también exporta en formato HTML tipo Bsale
+      const doc = new DOMParser().parseFromString(text, "text/html");
+      const table = doc.querySelector("table");
+      if(!table) throw new Error("Archivo HTML sin tabla reconocible.");
+      const rows = Array.from(table.querySelectorAll("tr")).map(tr =>
+        Array.from(tr.querySelectorAll("td,th")).map(td=>td.textContent)
+      );
+      return extractBarcodesFromRows(rows);
+    } else {
+      // CSV / TXT simple
+      const delim = text.includes(";") ? ";" : (text.includes("\t") ? "\t" : ",");
+      const rows = text.split(/\r?\n/).filter(l=>l.trim()!=="").map(l=>l.split(delim));
+      return extractBarcodesFromRows(rows);
+    }
+  }
+}
+function extractBarcodesFromRows(rows){
+  if(rows.length === 0) return tallyBarcodes([]);
+  const header = rows[0].map(c=>String(c).toLowerCase());
+  let col = header.findIndex(h => h.includes("barra") || h.includes("codigo") || h.includes("código"));
+  let dataRows = rows;
+  if(col === -1){
+    // sin header reconocible: revisar si la primera fila parece ser dato (numérica) o encabezado de texto
+    const looksHeader = rows[0].some(c => /[a-zA-Z]{3,}/.test(String(c)) && !/^[0-9]+$/.test(String(c)));
+    col = 0;
+    dataRows = looksHeader ? rows.slice(1) : rows;
+  } else {
+    dataRows = rows.slice(1);
+  }
+  const list = dataRows.map(r => r[col]);
+  return tallyBarcodes(list);
+}
+
+/* =========================================================
+   ESTADO GLOBAL
+   ========================================================= */
+let CAT = null;           // {catalog, normIndex, stats, builtAt, fileNames}
+let localTally = new Map(); // barcode -> cantidad escaneada
+let pedido = new Map();     // barcode -> {entry, stockLocal, cantidad, manual}
+
+/* =========================================================
+   DOM
+   ========================================================= */
+const el = id => document.getElementById(id);
+const fileStockCM = el("fileStockCM"), fileCaro = el("fileCaro"), fileBarato = el("fileBarato");
+const statusStockCM = el("statusStockCM"), statusCaro = el("statusCaro"), statusBarato = el("statusBarato");
+const btnProcesarCatalogo = el("btnProcesarCatalogo");
+const catalogLog = el("catalogLog");
+const catalogCachedBox = el("catalogCachedBox");
+const catalogUploadBox = el("catalogUploadBox");
+const cardVisita = el("cardVisita"), cardLocal = el("cardLocal"), cardTabla = el("cardTabla");
+const inpFecha = el("inpFecha");
+inpFecha.value = todayISO();
+
+let picked = {stockCM:null, caro:null, barato:null};
+function checkCatalogReady(){
+  btnProcesarCatalogo.disabled = !(picked.stockCM && picked.caro && picked.barato);
+}
+function bindFile(input, statusEl, key, label){
+  input.addEventListener("change", ()=>{
+    const f = input.files[0];
+    picked[key] = f || null;
+    if(f){
+      statusEl.textContent = "✔ " + f.name + " (" + (f.size/1024/1024).toFixed(1) + " MB)";
+      statusEl.className = "file-status ok";
+    } else {
+      statusEl.textContent = "Sin cargar";
+      statusEl.className = "file-status pending";
+    }
+    checkCatalogReady();
+  });
+}
+bindFile(fileStockCM, statusStockCM, "stockCM");
+bindFile(fileCaro, statusCaro, "caro");
+bindFile(fileBarato, statusBarato, "barato");
+
+function showCachedCatalog(cache){
+  catalogUploadBox.style.display = "none";
+  catalogCachedBox.style.display = "block";
+  const names = cache.fileNames || {};
+  catalogCachedBox.innerHTML = `
+    <div class="catalog-status">
+      <div class="ico">📦</div>
+      <div class="txt">
+        <strong>${cache.stats.totalCatalogo.toLocaleString("es-CL")} productos cargados</strong>
+        <span>Catálogo guardado el ${fmtDateTime(cache.builtAt)} — ${esc(names.stockCM||"stock")} · ${esc(names.caro||"caro")} · ${esc(names.barato||"barato")}</span>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="secondary" id="btnCargarNuevoCatalogo">Cargar catálogo nuevo</button>
+    </div>
+  `;
+  el("btnCargarNuevoCatalogo").addEventListener("click", ()=>{
+    catalogCachedBox.style.display = "none";
+    catalogUploadBox.style.display = "block";
+  });
+  activateCatalog(cache);
+}
+
+function activateCatalog(cache){
+  CAT = cache;
+  el("cardCatalogo").classList.add("done");
+  cardVisita.classList.remove("locked");
+  cardLocal.classList.remove("locked");
+  populateTipoFiltro(cache);
+}
+
+function populateTipoFiltro(cache){
+  const tipos = new Set();
+  cache.catalog.forEach(e=>{ if(e.tipoProducto && e.stockCM > 0) tipos.add(e.tipoProducto); });
+  const sel = el("inpTipoFiltro");
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Todos los tipos</option>' +
+    Array.from(tipos).sort((a,b)=>a.localeCompare(b)).map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join("");
+  sel.value = current && tipos.has(current) ? current : "";
+}
+
+btnProcesarCatalogo.addEventListener("click", async ()=>{
+  catalogLog.innerHTML = "";
+  btnProcesarCatalogo.disabled = true;
+  el("catalogProcMsg").textContent = "Procesando...";
+  try{
+    log(catalogLog, "Leyendo Stock Casa Matriz...", "");
+    const cmBuf = await readFileAsArrayBuffer(picked.stockCM);
+    const cmRows = parseCasaMatrizXlsx(cmBuf);
+    log(catalogLog, `✔ ${cmRows.length} productos leídos de Stock Casa Matriz`, "l-ok");
+
+    log(catalogLog, "Leyendo lista de precio CARO...", "");
+    const caroText = await readFileAsText(picked.caro);
+    const caroRows = parseBsalePriceList(caroText);
+    log(catalogLog, `✔ ${caroRows.length} productos leídos de lista CARO`, "l-ok");
+
+    log(catalogLog, "Leyendo lista de precio BARATO...", "");
+    const baratoText = await readFileAsText(picked.barato);
+    const baratoRows = parseBsalePriceList(baratoText);
+    log(catalogLog, `✔ ${baratoRows.length} productos leídos de lista BARATO`, "l-ok");
+
+    const built = buildCatalog(caroRows, baratoRows, cmRows);
+    log(catalogLog, `✔ Catálogo combinado: ${built.stats.totalCatalogo} productos únicos`, "l-ok");
+    if(built.stats.cmUnmatched > 0){
+      log(catalogLog, `⚠ ${built.stats.cmUnmatched} productos de Casa Matriz no calzaron con ninguna lista de precio (se agregaron sin precio)`, "l-warn");
+    }
+    if(built.stats.cmFixedByNorm > 0){
+      log(catalogLog, `ℹ ${built.stats.cmFixedByNorm} códigos de Casa Matriz se recuperaron corrigiendo ceros iniciales perdidos por Excel`, "");
+    }
+
+    const fileNames = {stockCM: picked.stockCM.name, caro: picked.caro.name, barato: picked.barato.name};
+    const saved = saveCatalogCache(built, fileNames);
+    if(saved){
+      log(catalogLog, "✔ Catálogo guardado en este navegador para próximas visitas", "l-ok");
+    } else {
+      log(catalogLog, "⚠ No se pudo guardar en caché (archivo muy grande para este navegador). Deberás volver a cargar los 3 archivos la próxima vez.", "l-warn");
+    }
+
+    built.builtAt = new Date().toISOString();
+    built.fileNames = fileNames;
+    showCachedCatalog(built);
+    el("catalogProcMsg").textContent = "";
+  }catch(err){
+    console.error(err);
+    log(catalogLog, "✘ Error: " + err.message, "l-err");
+    el("catalogProcMsg").textContent = "";
+  }finally{
+    btnProcesarCatalogo.disabled = false;
+  }
+});
+
+// Al cargar la página: revisar si hay catálogo en caché
+(function init(){
+  const cache = loadCatalogCache();
+  if(cache) showCachedCatalog(cache);
+})();
+
+/* =========================================================
+   PASO 3: STOCK LOCAL
+   ========================================================= */
+el("btnProcesarLocal").addEventListener("click", async ()=>{
+  const msg = el("localProcMsg");
+  msg.textContent = "Leyendo...";
+  try{
+    let tally = new Map();
+    const f = el("fileLocal").files[0];
+    const pasted = el("inpLocalPaste").value.trim();
+    if(f){
+      tally = await parseLocalStockFile(f);
+      el("statusLocal").textContent = "✔ " + f.name;
+      el("statusLocal").className = "file-status ok";
+    } else if(pasted){
+      tally = tallyBarcodes(pasted.split(/\r?\n/));
+    } else {
+      msg.textContent = "";
+      alert("Sube un archivo o pega al menos un código de barras.");
+      return;
+    }
+    if(tally.size === 0){
+      msg.textContent = "";
+      alert("No se reconoció ningún código de barras válido en el archivo/lista.");
+      return;
+    }
+    localTally = tally;
+    let totalUnid = 0; tally.forEach(v=>totalUnid+=v);
+    msg.textContent = `✔ ${tally.size} productos distintos, ${totalUnid} unidades escaneadas`;
+    buildPedidoFromLocal();
+    cardTabla.classList.remove("locked");
+    el("cardLocal").classList.add("done");
+  }catch(err){
+    console.error(err);
+    msg.textContent = "";
+    alert("Error leyendo el archivo: " + err.message);
+  }
+});
+
+function buildPedidoFromLocal(){
+  pedido = new Map();
+  if(!CAT) return;
+
+  // 1. Base: TODO producto del catálogo que tenga stock en Casa Matriz.
+  //    Empieza con stock local en 0; se completa con el escaneo del local abajo.
+  CAT.catalog.forEach((entry, bc)=>{
+    if(entry.stockCM > 0){
+      pedido.set(bc, {barcode: bc, entry, stockLocal: 0, cantidad: 0, manual: false});
+    }
+  });
+
+  // 2. Suma el stock escaneado en el local. Se resuelve por código canónico del
+  //    catálogo (por si el código escaneado difiere en ceros iniciales, etc.).
+  //    Si un código escaneado no tiene stock en Casa Matriz o no está en catálogo,
+  //    igual se agrega como fila aparte para no perder información.
+  localTally.forEach((qty, rawBc)=>{
+    const entry = catalogLookup(CAT, rawBc);
+    const key = entry ? entry.barcode : rawBc;
+    if(pedido.has(key)){
+      pedido.get(key).stockLocal += qty;
+    } else {
+      pedido.set(key, {barcode: key, entry, stockLocal: qty, cantidad: 0, manual: false});
+    }
+  });
+
+  renderPedidoTable();
+}
+
+/* =========================================================
+   PASO 4: TABLA DE PEDIDO
+   ========================================================= */
+let sortColumn = "producto";  // "producto" | "precioCaro" | "precioBarato" | "stockCM"
+let sortDir = "asc";
+
+function sortValue(r, col){
+  if(col === "producto") return r.entry ? r.entry.producto : "zzz"+r.barcode;
+  if(!r.entry) return 0;
+  if(col === "precioCaro") return r.entry.precioCaro || 0;
+  if(col === "precioBarato") return r.entry.precioBarato || 0;
+  if(col === "stockCM") return r.entry.stockCM || 0;
+  return 0;
+}
+
+function renderPedidoTable(){
+  const tbody = el("tbodyPedido");
+  tbody.innerHTML = "";
+  const filter = (el("inpBuscar").value||"").trim().toLowerCase();
+  const tipo = el("inpTipoFiltro").value;
+
+  let rows = Array.from(pedido.values());
+  if(tipo){
+    rows = rows.filter(r => r.entry && r.entry.tipoProducto === tipo);
+  }
+  if(filter){
+    rows = rows.filter(r=>{
+      const name = r.entry ? r.entry.producto.toLowerCase() : "";
+      return r.barcode.toLowerCase().includes(filter) || name.includes(filter);
+    });
+  }
+
+  rows.sort((a,b)=>{
+    const va = sortValue(a, sortColumn), vb = sortValue(b, sortColumn);
+    if(sortColumn === "producto"){
+      return sortDir === "desc" ? vb.localeCompare(va) : va.localeCompare(vb);
+    }
+    return sortDir === "desc" ? vb - va : va - vb;
+  });
+
+  for(const r of rows){
+    const tr = document.createElement("tr");
+    if(!r.entry) tr.classList.add("not-found");
+    const producto = esc(r.entry ? r.entry.producto : "(no encontrado en catálogo — verificar código)");
+    const stockCM = r.entry ? r.entry.stockCM : "-";
+    const precioCaro = r.entry && r.entry.precioCaro > 0 ? fmtCLP(r.entry.precioCaro) : "-";
+    const precioBarato = r.entry && r.entry.precioBarato > 0 ? fmtCLP(r.entry.precioBarato) : "-";
+    const bcSafe = esc(r.barcode);
+
+    tr.innerHTML = `
+      <td>${bcSafe}</td>
+      <td>${producto} ${!r.entry ? '<span class="tag miss">sin catálogo</span>' : ''}</td>
+      <td>${precioCaro}</td>
+      <td>${precioBarato}</td>
+      <td>${stockCM}</td>
+      <td>${r.stockLocal}</td>
+      <td><input type="number" min="0" step="1" class="qty-input" value="${r.cantidad}" data-bc="${bcSafe}"></td>
+      <td>${r.manual ? '<button class="danger" data-del="'+bcSafe+'" style="padding:3px 8px;font-size:11px;">✕</button>' : ''}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  tbody.querySelectorAll(".qty-input").forEach(inp=>{
+    inp.addEventListener("input", ()=>{
+      const bc = inp.dataset.bc;
+      const row = pedido.get(bc);
+      row.cantidad = Math.max(0, parseInt(inp.value)||0);
+      updateSummary();
+    });
+  });
+  tbody.querySelectorAll("[data-del]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      pedido.delete(btn.dataset.del);
+      renderPedidoTable();
+      updateSummary();
+    });
+  });
+
+  updateSummary();
+}
+
+function updateSummary(){
+  let productos = pedido.size;
+  let unidades = 0;
+  pedido.forEach(r=>{ unidades += r.cantidad; });
+  el("sumProductos").textContent = productos.toLocaleString("es-CL");
+  el("sumUnidades").textContent = unidades.toLocaleString("es-CL");
+  renderBucketSummary();
+}
+
+/* =========================================================
+   RESUMEN POR RANGO (mismo agrupamiento que usa el Excel:
+   TORN / ACC en un solo cajón, VIN y CD separados por precio)
+   ========================================================= */
+function renderBucketSummary(){
+  const box = el("bucketSummary");
+  const rows = Array.from(pedido.values()).filter(r=>r.cantidad > 0);
+  if(rows.length === 0){
+    box.innerHTML = '<span class="small-muted">Aún no hay cantidades ingresadas.</span>';
+    return;
+  }
+  const cadena = el("inpCadena").value;
+  const buckets = buildBuckets(rows, cadena);
+  box.innerHTML = buckets.map(b=>{
+    const total = b.rows.reduce((s,r)=>s+r.cantidad,0);
+    return `<div class="bucket-box"><div class="n">${total.toLocaleString("es-CL")}</div><div class="l">${esc(b.label)}</div></div>`;
+  }).join("");
+}
+
+el("inpBuscar").addEventListener("input", ()=> renderPedidoTable());
+el("inpTipoFiltro").addEventListener("change", ()=> renderPedidoTable());
+el("inpCadena").addEventListener("change", ()=> updateSummary());
+
+/* =========================================================
+   ORDENAR POR COLUMNA (Producto / Precio Caro / Precio Barato / Stock Casa Matriz)
+   Clic: ordena de mayor a menor (o Z-A en Producto). Clic de nuevo en la misma
+   columna: alterna al orden inverso.
+   ========================================================= */
+function updateSortUI(){
+  document.querySelectorAll("th.sortable").forEach(t=>{
+    const active = t.dataset.sort === sortColumn;
+    t.classList.toggle("active", active);
+    el("arrow-"+t.dataset.sort).textContent = active ? (sortDir === "desc" ? "▼" : "▲") : "";
+  });
+}
+document.querySelectorAll("th.sortable").forEach(th=>{
+  th.addEventListener("click", ()=>{
+    const col = th.dataset.sort;
+    if(sortColumn === col){
+      sortDir = sortDir === "desc" ? "asc" : "desc";
+    } else {
+      sortColumn = col;
+      sortDir = "desc";
+    }
+    updateSortUI();
+    renderPedidoTable();
+  });
+});
+updateSortUI();
+
+/* =========================================================
+   NUEVO LOCAL (reinicia visita sin perder catálogo)
+   ========================================================= */
+el("btnNuevoLocal").addEventListener("click", ()=>{
+  if(!confirm("Esto borrará el pedido actual (el catálogo se mantiene). ¿Continuar?")) return;
+  localTally = new Map();
+  pedido = new Map();
+  el("inpLocal").value = "";
+  el("inpFecha").value = todayISO();
+  el("fileLocal").value = "";
+  el("inpLocalPaste").value = "";
+  el("statusLocal").textContent = "Sin cargar";
+  el("statusLocal").className = "file-status pending";
+  el("localProcMsg").textContent = "";
+  el("inpBuscar").value = "";
+  el("inpTipoFiltro").value = "";
+  sortColumn = "producto";
+  sortDir = "asc";
+  updateSortUI();
+  el("tbodyPedido").innerHTML = "";
+  cardTabla.classList.add("locked");
+  el("cardLocal").classList.remove("done");
+  updateSummary();
+  window.scrollTo({top: cardVisita.offsetTop - 20, behavior:"smooth"});
+});
+
+/* =========================================================
+   EXPORTAR EXCEL — separado por hojas (TORN, ACC, VIN $x, CD $x)
+   Regla de categoría (por nombre del producto):
+     - "TORNAMESA"       -> hoja única "TORN" (sin separar por precio)
+     - "VINILO"          -> una hoja "VIN $x" por cada precio distinto
+     - "CD" o "DVD"       -> una hoja "CD $x" por cada precio distinto
+                             (DVD y combos CD+DVD comparten hoja con los
+                             CD que tengan el mismo precio)
+     - cualquier otra cosa (accesorios, sin catálogo, sin precio) -> "ACC"
+   Precio del rango: TODO — se asume Jumbo usa Precio Caro y Santa Isabel
+   Precio Barato. Esto es un supuesto a confirmar, fácil de invertir.
+   ========================================================= */
+function deriveCategoria(nombreProducto){
+  const n = (nombreProducto || "").toUpperCase();
+  if(/TORNAMESA/.test(n)) return "TORN";
+  if(/VINILO/.test(n)) return "VIN";
+  if(/\bCD\b/.test(n) || /\bDVD\b/.test(n)) return "CD";
+  return "ACC";
+}
+function precioParaRango(entry, cadena){
+  if(!entry) return 0;
+  const principal = cadena === "Santa Isabel" ? entry.precioBarato : entry.precioCaro;
+  const secundario = cadena === "Santa Isabel" ? entry.precioCaro : entry.precioBarato;
+  return principal > 0 ? principal : (secundario > 0 ? secundario : 0);
+}
+// Agrupa filas del pedido en "buckets" (TORN, ACC, VIN $x, CD $x) — usado
+// tanto por el resumen en pantalla como por la exportación a Excel.
+function buildBuckets(rows, cadena){
+  const buckets = new Map(); // key -> {label, sortKey, rows:[]}
+  function addRow(key, label, sortKey, row){
+    if(!buckets.has(key)) buckets.set(key, {label, sortKey, rows: []});
+    buckets.get(key).rows.push(row);
+  }
+  for(const r of rows){
+    const nombre = r.entry ? r.entry.producto : "";
+    let cat = deriveCategoria(nombre);
+    let precio = 0;
+    if(cat === "VIN" || cat === "CD"){
+      precio = precioParaRango(r.entry, cadena);
+      if(precio === 0) cat = "ACC"; // sin precio conocido, no se puede asignar un rango
+    }
+    if(cat === "TORN"){
+      addRow("TORN", "TORN", -2e9, r);
+    } else if(cat === "ACC"){
+      addRow("ACC", "ACC", -1e9, r);
+    } else {
+      const key = cat + "_" + precio;
+      const label = `${cat} ${fmtCLP(precio)}`;
+      const grupoOrden = cat === "VIN" ? 0 : 1e9;
+      addRow(key, label, grupoOrden - precio, r);
+    }
+  }
+  return Array.from(buckets.values()).sort((a,b)=>a.sortKey - b.sortKey);
+}
+
+el("btnExportar").addEventListener("click", ()=>{
+  const cadena = el("inpCadena").value;
+  const local = el("inpLocal").value.trim() || "SinNombre";
+  const fecha = el("inpFecha").value || todayISO();
+
+  const rows = Array.from(pedido.values()).filter(r=>r.cantidad > 0);
+
+  if(rows.length === 0){
+    alert("No hay ninguna cantidad a pedir ingresada todavía.");
+    return;
+  }
+
+  const bucketsOrdenados = buildBuckets(rows, cadena);
+
+  const wb = XLSX.utils.book_new();
+  for(const bucket of bucketsOrdenados){
+    const catRows = bucket.rows.slice().sort((a,b)=>{
+      const na = a.entry ? a.entry.producto : a.barcode;
+      const nb = b.entry ? b.entry.producto : b.barcode;
+      return na.localeCompare(nb);
+    });
+    const data = catRows.map(r=>({
+      "Barra": r.barcode,
+      "Cantidad a Reponer": r.cantidad,
+      "Producto": r.entry ? r.entry.producto : "(no encontrado en catálogo)",
+      "Precio Caro": r.entry && r.entry.precioCaro > 0 ? r.entry.precioCaro : "",
+      "Precio Barato": r.entry && r.entry.precioBarato > 0 ? r.entry.precioBarato : ""
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws["!cols"] = [{wch:16},{wch:18},{wch:55},{wch:11},{wch:12}];
+    const sheetName = bucket.label.replace(/[\\/?*\[\]:]/g,"-").slice(0,31);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  }
+
+  const safeLocal = local.replace(/[^a-zA-Z0-9_\- ]/g,"").replace(/\s+/g,"_");
+  const filename = `Reposicion_${cadena.replace(/\s+/g,"")}_${safeLocal}_${fecha}.xlsx`;
+  XLSX.writeFile(wb, filename);
+  el("exportMsg").textContent = "✔ Descargado: " + filename;
+});
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de Herramientas del Equipo</title>
+<style>
+  :root{
+    --bg:#0f1117;
+    --card:#171a23;
+    --card-hover:#1f2330;
+    --accent:#7c9cff;
+    --accent-2:#ff9f6b;
+    --text:#eef0f5;
+    --muted:#9aa1b4;
+    --border:#262b3a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(1200px 600px at 20% -10%, #1a2035 0%, var(--bg) 60%);
+    color:var(--text);
+    min-height:100vh;
+  }
+  header{
+    padding:40px 24px 16px;
+    text-align:center;
+  }
+  header h1{
+    margin:0 0 6px;
+    font-size:28px;
+    letter-spacing:.3px;
+  }
+  header p{
+    margin:0;
+    color:var(--muted);
+    font-size:14px;
+  }
+  .toolbar{
+    max-width:960px;
+    margin:24px auto 0;
+    padding:0 24px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+  .toolbar input, .toolbar select{
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:10px 14px;
+    border-radius:10px;
+    font-size:14px;
+    outline:none;
+  }
+  .toolbar input{flex:1;min-width:220px;}
+  .toolbar input:focus, .toolbar select:focus{border-color:var(--accent);}
+
+  main{
+    max-width:1080px;
+    margin:0 auto;
+    padding:28px 24px 60px;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));
+    gap:16px;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:20px 16px;
+    text-decoration:none;
+    color:var(--text);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    gap:10px;
+    transition:transform .12s ease, background .12s ease, border-color .12s ease;
+    position:relative;
+  }
+  .card:hover{
+    background:var(--card-hover);
+    transform:translateY(-3px);
+    border-color:var(--accent);
+  }
+  .icon{
+    width:56px;
+    height:56px;
+    border-radius:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:26px;
+    background:linear-gradient(135deg, var(--accent), var(--accent-2));
+  }
+  .card h3{
+    margin:2px 0 0;
+    font-size:15px;
+  }
+  .card p{
+    margin:0;
+    font-size:12.5px;
+    color:var(--muted);
+    line-height:1.4;
+  }
+  .tag{
+    position:absolute;
+    top:10px;
+    right:10px;
+    font-size:10px;
+    padding:2px 8px;
+    border-radius:999px;
+    background:#2a2f40;
+    color:var(--muted);
+  }
+  .empty{
+    text-align:center;
+    color:var(--muted);
+    padding:40px 0;
+    display:none;
+  }
+  footer{
+    text-align:center;
+    color:var(--muted);
+    font-size:12px;
+    padding:20px;
+  }
+  .note{
+    max-width:960px;
+    margin:0 auto;
+    padding:0 24px;
+    color:var(--muted);
+    font-size:12.5px;
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎧 Panel de Herramientas del Equipo</h1>
+  <p>Accesos rápidos a todas las plataformas y utilidades que hemos creado</p>
+</header>
+
+<div class="toolbar">
+  <input id="buscador" type="text" placeholder="Buscar herramienta... (ej: inventario, promociones)">
+  <select id="filtroCategoria">
+    <option value="">Todas las categorías</option>
+  </select>
+</div>
+
+<main>
+  <div class="grid" id="grid"></div>
+  <p class="empty" id="empty">No se encontró ninguna herramienta con ese filtro.</p>
+</main>
+
+<p class="note">
+  ¿Falta una herramienta? Agrégala editando el arreglo <code>HERRAMIENTAS</code> al final de este archivo,
+  o guarda tu archivo .html dentro de la carpeta <code>herramientas/</code> y súmalo a la lista.
+</p>
+
+<footer>Panel interno · actualiza este archivo cada vez que agreguen una nueva herramienta</footer>
+
+<script>
+  // ============================================================
+  // AGREGA AQUÍ CADA NUEVA HERRAMIENTA HTML DEL EQUIPO
+  // - nombre: título de la tarjeta
+  // - desc: descripción corta (1 línea)
+  // - icono: un emoji o símbolo
+  // - url: ruta al archivo .html (ej: "herramientas/inventario.html")
+  //         o un link externo si la herramienta vive en otro lado
+  // - categoria: úsala para agrupar/filtrar (Inventario, Ventas, Locales, etc.)
+  // ============================================================
+  const HERRAMIENTAS = [
+    {
+      nombre: "Repo PM",
+      desc: "Reposición PM",
+      icono: "🔁",
+      url: "herramientas/RepoPM.html",
+      categoria: "Pedidos"
+    },
+    {
+      nombre: "Repo Consignación",
+      desc: "Reposición de consignación",
+      icono: "🔄",
+      url: "herramientas/Repo_Consignacion.html",
+      categoria: "Pedidos"
+    },
+    {
+      nombre: "Pendiente GLD",
+      desc: "Seguimiento de pedidos (publicado)",
+      icono: "🌐",
+      url: "https://pendientegld.netlify.app/",
+      categoria: "Seguimiento"
+    },
+    {
+      nombre: "Recepcion AFV",
+      desc: "Recepción AFV (publicado)",
+      icono: "🌐",
+      url: "https://cacodro.github.io/recepcion-afv/",
+      categoria: "Seguimiento"
+    }
+  ];
+  // ============================================================
+  // Agrega aquí cada nueva herramienta siguiendo el mismo formato
+  // ============================================================
+
+  const grid = document.getElementById('grid');
+  const buscador = document.getElementById('buscador');
+  const filtroCategoria = document.getElementById('filtroCategoria');
+  const empty = document.getElementById('empty');
+
+  // Poblar filtro de categorías
+  const categorias = [...new Set(HERRAMIENTAS.map(h => h.categoria))].sort();
+  categorias.forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value = cat;
+    opt.textContent = cat;
+    filtroCategoria.appendChild(opt);
+  });
+
+  function render() {
+    const texto = buscador.value.trim().toLowerCase();
+    const cat = filtroCategoria.value;
+
+    const filtradas = HERRAMIENTAS.filter(h => {
+      const coincideTexto = !texto ||
+        h.nombre.toLowerCase().includes(texto) ||
+        h.desc.toLowerCase().includes(texto);
+      const coincideCat = !cat || h.categoria === cat;
+      return coincideTexto && coincideCat;
+    });
+
+    grid.innerHTML = '';
+    filtradas.forEach(h => {
+      const a = document.createElement('a');
+      a.className = 'card';
+      a.href = h.url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.innerHTML = `
+        <span class="tag">${h.categoria}</span>
+        <div class="icon">${h.icono}</div>
+        <h3>${h.nombre}</h3>
+        <p>${h.desc}</p>
+      `;
+      grid.appendChild(a);
+    });
+
+    empty.style.display = filtradas.length === 0 ? 'block' : 'none';
+  }
+
+  buscador.addEventListener('input', render);
+  filtroCategoria.addEventListener('change', render);
+  render();
+</script>
+
+</body>
+</html>
+
