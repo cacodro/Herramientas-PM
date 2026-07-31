@@ -43,6 +43,12 @@
   button:disabled{background:#a9b6cc; cursor:not-allowed;}
   button.secondary{background:#fff; color:var(--blue); border:1px solid var(--blue);}
   button.ghost{background:#fff; color:var(--text); border:1px solid var(--border);}
+  button.icon-btn{
+    background:#fff; color:var(--text); border:1px solid var(--border);
+    width:38px; height:38px; padding:0; display:inline-flex; align-items:center; justify-content:center;
+  }
+  button.icon-btn:hover{background:#f5f6f8;}
+  button.icon-btn svg{width:18px; height:18px; display:block;}
   .actions{display:flex; gap:10px; align-items:center; margin-top:18px; flex-wrap:wrap;}
   .status-msg{font-size:13px; color:var(--muted);}
   .status-msg.error{color:#b91c1c; font-weight:600;}
@@ -114,6 +120,26 @@
   .muted{color:var(--muted);}
   .empty-state{padding:40px 10px; text-align:center; color:var(--muted);}
   tr.tier-boundary td{border-top:2px solid #d7dbe2;}
+
+  .chk-cell{width:28px; text-align:center;}
+  .chk-box{
+    width:16px; height:16px; border:1.6px solid #9aa2b1; border-radius:3px;
+    display:inline-block; margin:0; vertical-align:middle;
+  }
+
+  @media print{
+    @page{ size: letter; margin: 12mm; }
+    body{ background:#fff; padding:0; }
+    .top-toolbar, .modal-overlay, .toolbar, .chips, .filename{ display:none !important; }
+    .panel{ border:none; padding:0; margin:0; }
+    h1{ margin-bottom:10px; }
+    .table-wrap{ max-height:none; overflow:visible; border:none; }
+    table{ font-size:11px; }
+    thead th{ position:static; background:#fff; }
+    tbody tr{ break-inside:avoid; }
+    .doc-link{ color:#000; text-decoration:none; }
+    .pill{ border:1px solid currentColor; }
+  }
 </style>
 </head>
 <body>
@@ -123,6 +149,13 @@
   <div class="top-toolbar">
     <button id="btnAbrirCarga">📂 Cargar archivos</button>
     <button id="btnExportar" class="secondary" style="display:none;">Descargar resultado en Excel</button>
+    <button id="btnImprimir" class="icon-btn" title="Imprimir" aria-label="Imprimir" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+        <rect x="6" y="14" width="12" height="8"></rect>
+      </svg>
+    </button>
     <a href="https://app.anymarket.com.br/home" target="_blank" rel="noopener"><button type="button" class="ghost">Abrir Anymarket ↗</button></a>
     <span class="status-msg" id="statusMsg"></span>
   </div>
@@ -187,6 +220,7 @@
         <thead>
           <tr>
             <th>Market</th>
+            <th class="chk-cell"></th>
             <th>N° doc</th>
             <th>Tipo doc</th>
             <th>OC</th>
@@ -210,7 +244,10 @@ const fileBodegaInput = document.getElementById('fileBodega');
 const fileMktInput = document.getElementById('fileMkt');
 const btnCruzar = document.getElementById('btnCruzar');
 const btnExportar = document.getElementById('btnExportar');
+const btnImprimir = document.getElementById('btnImprimir');
 const statusMsg = document.getElementById('statusMsg');
+
+btnImprimir.addEventListener('click', () => window.print());
 
 let fBodega = null, fMkt = null;
 
@@ -518,7 +555,7 @@ function escapeHtml(s){
 function renderTable(rows){
   const tbody = document.getElementById('resultBody');
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="empty-state">Sin resultados para este filtro.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="empty-state">Sin resultados para este filtro.</td></tr>`;
     return;
   }
   let prevTier = null;
@@ -528,6 +565,7 @@ function renderTable(rows){
     return `
     <tr class="${boundary ? 'tier-boundary' : ''}">
       <td><span class="pill t${r.tier}"><span class="n">${r.tier}</span>${escapeHtml(r.market)}</span></td>
+      <td class="chk-cell"><span class="chk-box"></span></td>
       <td><button class="doc-link" data-doc="${escapeHtml(r.documento)}">${escapeHtml(r.nDoc || r.documento)}</button></td>
       <td>${escapeHtml(r.tipoDoc)}</td>
       <td>${escapeHtml(r.oc) || '<span class="muted">—</span>'}</td>
@@ -605,6 +643,7 @@ btnCruzar.addEventListener('click', async () => {
     document.getElementById('filterTier').value = '';
     renderTable(crossed);
     btnExportar.style.display = 'inline-block';
+    btnImprimir.style.display = 'inline-flex';
     statusMsg.textContent = `Cruce listo: ${bodegaRows.length} líneas de bodega agrupadas en ${crossed.length} documentos, ${mktRows.length} líneas de canales.`;
     cerrarModal();
   } catch (err) {
