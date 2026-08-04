@@ -53,6 +53,13 @@
   .status-msg{font-size:13px; color:var(--muted);}
   .status-msg.error{color:#b91c1c; font-weight:600;}
 
+  .tabbar{display:flex; gap:8px; margin-bottom:16px;}
+  .tab-btn{
+    background:#fff; color:var(--muted); border:1px solid var(--border); border-radius:8px;
+    padding:9px 16px; font-size:13.5px; font-weight:700; cursor:pointer;
+  }
+  .tab-btn.active{background:var(--blue); color:#fff; border-color:var(--blue);}
+
   .top-toolbar{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:16px;}
 
   .modal-overlay{
@@ -66,7 +73,7 @@
   }
   .modal-box.wide{max-width:820px;}
   .modal-box h2{font-size:16px; margin:0 0 4px 0;}
-  .modal-box .modal-sub{font-size:12.5px; color:var(--muted); margin:0 0 16px 0;}
+  .modal-box .modal-sub{font-size:12.5px; color:var(--muted); margin:0 0 16px 0; line-height:1.6;}
   .modal-close{
     position:absolute; top:14px; right:16px; background:none; border:none; color:var(--muted);
     font-size:20px; padding:2px 6px; line-height:1; cursor:pointer;
@@ -80,8 +87,7 @@
   .chip.t2{background:var(--purple-bg); color:var(--purple);}
   .chip.t3{background:var(--amber-bg); color:var(--amber);}
   .chip.t4{background:var(--green-bg); color:var(--green);}
-  .chip.t5{background:var(--teal-bg); color:var(--teal);}
-  .chip.t6{background:var(--slate-bg); color:var(--slate);}
+  .chip.t5{background:var(--slate-bg); color:var(--slate);}
 
   .toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:14px 0 10px 0;}
   .toolbar input[type=text]{
@@ -106,8 +112,7 @@
   .pill.t2{background:var(--purple-bg); color:var(--purple);}
   .pill.t3{background:var(--amber-bg); color:var(--amber);}
   .pill.t4{background:var(--green-bg); color:var(--green);}
-  .pill.t5{background:var(--teal-bg); color:var(--teal);}
-  .pill.t6{background:var(--slate-bg); color:var(--slate);}
+  .pill.t5{background:var(--slate-bg); color:var(--slate);}
   .pill .n{font-size:10.5px; opacity:.75; font-weight:700;}
   .warn{color:#c2410c; font-weight:700; margin-left:4px; cursor:help;}
 
@@ -127,10 +132,21 @@
     display:inline-block; margin:0; vertical-align:middle;
   }
 
+  #labelsArea{display:none;}
+  .etiqueta{
+    width:10cm; height:8cm; box-sizing:border-box; padding:0.7cm;
+    display:flex; flex-direction:column; justify-content:center; gap:8px;
+    page-break-after:always; break-after:page;
+  }
+  .etiqueta:last-child{page-break-after:auto; break-after:auto;}
+  .etiqueta .et-market{font-size:24px; font-weight:800; line-height:1.2;}
+  .etiqueta .et-cliente{font-size:16px; font-weight:600; min-height:20px; line-height:1.2;}
+  .etiqueta .et-doc, .etiqueta .et-oc, .etiqueta .et-extra, .etiqueta .et-cantidad, .etiqueta .et-fecha{font-size:14px; color:#222;}
+
   @media print{
     @page{ size: letter; margin: 12mm; }
     body{ background:#fff; padding:0; }
-    .top-toolbar, .modal-overlay, .toolbar, .chips, .filename{ display:none !important; }
+    .top-toolbar, .modal-overlay, .toolbar, .chips, .filename, .tabbar{ display:none !important; }
     .panel{ border:none; padding:0; margin:0; }
     h1{ margin-bottom:10px; }
     .table-wrap{ max-height:none; overflow:visible; border:none; }
@@ -139,6 +155,9 @@
     tbody tr{ break-inside:avoid; }
     .doc-link{ color:#000; text-decoration:none; }
     .pill{ border:1px solid currentColor; }
+
+    body.printing-labels > *:not(#labelsArea){ display:none !important; }
+    body.printing-labels #labelsArea{ display:block !important; }
   }
 </style>
 </head>
@@ -146,96 +165,275 @@
 
   <h1>Cruce Bodega × Canal de Venta</h1>
 
-  <div class="top-toolbar">
-    <button id="btnAbrirCarga">📂 Cargar archivos</button>
-    <button id="btnExportar" class="secondary" style="display:none;">Descargar resultado en Excel</button>
-    <button id="btnImprimir" class="icon-btn" title="Imprimir" aria-label="Imprimir" style="display:none;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="6 9 6 2 18 2 18 9"></polyline>
-        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-        <rect x="6" y="14" width="12" height="8"></rect>
-      </svg>
-    </button>
-    <a href="https://app.anymarket.com.br/home" target="_blank" rel="noopener"><button type="button" class="ghost">Abrir Anymarket ↗</button></a>
-    <span class="status-msg" id="statusMsg"></span>
+  <div class="tabbar">
+    <button type="button" class="tab-btn active" id="tabBtnCruce">Cruce por Canal</button>
+    <button type="button" class="tab-btn" id="tabBtnWeb">Pedidos Web</button>
   </div>
 
-  <div class="modal-overlay" id="uploadModal">
-    <div class="modal-box">
-      <button class="modal-close" id="btnCerrarModal" aria-label="Cerrar">✕</button>
-      <h2>Cargar archivos</h2>
-      <div class="cols">
-        <div class="col">
-          <h3>1) Archivo de Bodega (Bsale)</h3>
-          <input type="file" id="fileBodega" accept=".xls,.xlsx,.html,.htm">
-          <div class="filename" id="fileBodegaName"></div>
+  <!-- ===================== TAB 1: CRUCE POR CANAL ===================== -->
+  <div id="viewCruce">
+
+    <div class="top-toolbar">
+      <button id="btnAbrirCarga">📂 Cargar archivos</button>
+      <button id="btnExportar" class="secondary" style="display:none;">Descargar resultado en Excel</button>
+      <button id="btnImprimir" class="icon-btn" title="Imprimir" aria-label="Imprimir" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 6 2 18 2 18 9"></polyline>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+          <rect x="6" y="14" width="12" height="8"></rect>
+        </svg>
+      </button>
+      <button id="btnEtiquetas" class="icon-btn" title="Generar etiquetas" aria-label="Generar etiquetas" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L4 3a1 1 0 0 0-1 1l.24 5.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.35-4.35a2 2 0 0 0 0-2.82Z"></path>
+          <circle cx="7.5" cy="7.5" r="1.2"></circle>
+        </svg>
+      </button>
+      <a href="https://app.anymarket.com.br/home" target="_blank" rel="noopener"><button type="button" class="ghost">Abrir Anymarket ↗</button></a>
+      <span class="status-msg" id="statusMsg"></span>
+    </div>
+
+    <div class="modal-overlay" id="uploadModal">
+      <div class="modal-box">
+        <button class="modal-close" id="btnCerrarModal" aria-label="Cerrar">✕</button>
+        <h2>Cargar archivos</h2>
+        <div class="cols">
+          <div class="col">
+            <h3>1) Archivo de Bodega (Bsale)</h3>
+            <input type="file" id="fileBodega" accept=".xls,.xlsx,.html,.htm">
+            <div class="filename" id="fileBodegaName"></div>
+          </div>
+          <div class="col">
+            <h3>2) Archivo de Canales (Anymarket)</h3>
+            <input type="file" id="fileMkt" accept=".zip,.xlsx,.xls">
+            <div class="filename" id="fileMktName"></div>
+          </div>
         </div>
-        <div class="col">
-          <h3>2) Archivo de Canales (Anymarket)</h3>
-          <input type="file" id="fileMkt" accept=".zip,.xlsx,.xls">
-          <div class="filename" id="fileMktName"></div>
+        <div class="actions">
+          <button id="btnCruzar" disabled>Cruzar información</button>
         </div>
-      </div>
-      <div class="actions">
-        <button id="btnCruzar" disabled>Cruzar información</button>
       </div>
     </div>
-  </div>
 
-  <div class="modal-overlay" id="detailModal">
-    <div class="modal-box wide">
-      <button class="modal-close" id="btnCerrarDetalle" aria-label="Cerrar">✕</button>
-      <h2 id="detalleTitulo">Detalle del documento</h2>
-      <p class="modal-sub" id="detalleSub"></p>
-      <div class="table-wrap" style="max-height:420px;">
-        <table>
+    <div class="modal-overlay" id="detailModal">
+      <div class="modal-box wide">
+        <button class="modal-close" id="btnCerrarDetalle" aria-label="Cerrar">✕</button>
+        <h2 id="detalleTitulo">Detalle del documento</h2>
+        <p class="modal-sub" id="detalleSub"></p>
+        <div class="table-wrap" style="max-height:420px;">
+          <table>
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>Nombre producto</th>
+                <th>Cantidad</th>
+                <th>Market</th>
+                <th>OC</th>
+                <th>Región</th>
+              </tr>
+            </thead>
+            <tbody id="detalleBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="resultsPanel" style="display:none;">
+      <div class="chips" id="chips"></div>
+
+      <div class="toolbar">
+        <input type="text" id="searchBox" placeholder="Buscar por N° doc, SKU, producto, región, OC...">
+        <select id="filterTier">
+          <option value="">Todas las prioridades</option>
+        </select>
+      </div>
+
+      <div class="table-wrap">
+        <table id="resultTable">
           <thead>
             <tr>
-              <th>SKU</th>
-              <th>Nombre producto</th>
-              <th>Cantidad</th>
               <th>Market</th>
+              <th class="chk-cell"></th>
+              <th>N° doc</th>
+              <th>Tipo doc</th>
               <th>OC</th>
+              <th>Fecha</th>
               <th>Región</th>
+              <th>Títulos</th>
+              <th>Cantidad</th>
             </tr>
           </thead>
-          <tbody id="detalleBody"></tbody>
+          <tbody id="resultBody"></tbody>
         </table>
       </div>
     </div>
+
   </div>
 
-  <div class="panel" id="resultsPanel" style="display:none;">
-    <div class="chips" id="chips"></div>
+  <!-- ===================== TAB 2: PEDIDOS WEB ===================== -->
+  <div id="viewWeb" style="display:none;">
 
-    <div class="toolbar">
-      <input type="text" id="searchBox" placeholder="Buscar por N° doc, SKU, producto, región, OC...">
-      <select id="filterTier">
-        <option value="">Todas las prioridades</option>
-      </select>
+    <div class="top-toolbar">
+      <button id="btnAbrirCargaWeb">📂 Cargar archivo</button>
+      <button id="btnImprimirWeb" class="icon-btn" title="Imprimir" aria-label="Imprimir" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 6 2 18 2 18 9"></polyline>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+          <rect x="6" y="14" width="12" height="8"></rect>
+        </svg>
+      </button>
+      <button id="btnEtiquetasWeb" class="icon-btn" title="Generar etiquetas" aria-label="Generar etiquetas" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L4 3a1 1 0 0 0-1 1l.24 5.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.35-4.35a2 2 0 0 0 0-2.82Z"></path>
+          <circle cx="7.5" cy="7.5" r="1.2"></circle>
+        </svg>
+      </button>
+      <span class="status-msg" id="statusMsgWeb"></span>
     </div>
 
-    <div class="table-wrap">
-      <table id="resultTable">
-        <thead>
-          <tr>
-            <th>Market</th>
-            <th class="chk-cell"></th>
-            <th>N° doc</th>
-            <th>Tipo doc</th>
-            <th>OC</th>
-            <th>Fecha</th>
-            <th>Región</th>
-            <th>Títulos</th>
-            <th>Cantidad</th>
-          </tr>
-        </thead>
-        <tbody id="resultBody"></tbody>
-      </table>
+    <div class="modal-overlay" id="uploadModalWeb">
+      <div class="modal-box">
+        <button class="modal-close" id="btnCerrarModalWeb" aria-label="Cerrar">✕</button>
+        <h2>Cargar reporte de Pedidos Web</h2>
+        <div class="cols">
+          <div class="col">
+            <h3>Reporte de Pedidos Web (Bsale)</h3>
+            <input type="file" id="fileWeb" accept=".csv">
+            <div class="filename" id="fileWebName"></div>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="btnCargarWeb" disabled>Cargar pedidos</button>
+        </div>
+      </div>
     </div>
+
+    <div class="modal-overlay" id="detailModalWeb">
+      <div class="modal-box wide">
+        <button class="modal-close" id="btnCerrarDetalleWeb" aria-label="Cerrar">✕</button>
+        <h2 id="detalleTituloWeb">Detalle del pedido</h2>
+        <p class="modal-sub" id="detalleSubWeb"></p>
+        <div class="table-wrap" style="max-height:420px;">
+          <table>
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>Nombre producto</th>
+                <th>Cantidad</th>
+              </tr>
+            </thead>
+            <tbody id="detalleBodyWeb"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="resultsPanelWeb" style="display:none;">
+      <div class="chips" id="chipsWeb"></div>
+
+      <div class="toolbar">
+        <input type="text" id="searchBoxWeb" placeholder="Buscar por N° pedido, cliente, SKU, producto...">
+        <select id="filterTipoRetiroWeb">
+          <option value="">Retiro y despacho</option>
+          <option value="Retiro">Retiro en tienda</option>
+          <option value="Despacho">Despacho a domicilio</option>
+        </select>
+      </div>
+
+      <div class="table-wrap">
+        <table id="resultTableWeb">
+          <thead>
+            <tr>
+              <th class="chk-cell"></th>
+              <th>N° pedido</th>
+              <th>Cliente</th>
+              <th>Tipo retiro</th>
+              <th>Destino</th>
+              <th>Courier</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody id="resultBodyWeb"></tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
+
+  <div id="labelsArea"></div>
 
 <script>
+/* ============================================================
+   NAVEGACIÓN ENTRE PESTAÑAS
+   ============================================================ */
+const tabBtnCruce = document.getElementById('tabBtnCruce');
+const tabBtnWeb = document.getElementById('tabBtnWeb');
+const viewCruce = document.getElementById('viewCruce');
+const viewWeb = document.getElementById('viewWeb');
+
+function activarTab(tab){
+  const esCruce = tab === 'cruce';
+  viewCruce.style.display = esCruce ? '' : 'none';
+  viewWeb.style.display = esCruce ? 'none' : '';
+  tabBtnCruce.classList.toggle('active', esCruce);
+  tabBtnWeb.classList.toggle('active', !esCruce);
+}
+tabBtnCruce.addEventListener('click', () => activarTab('cruce'));
+tabBtnWeb.addEventListener('click', () => activarTab('web'));
+
+function escapeHtml(s){
+  return (s ?? '').toString()
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function normalizeSku(raw){
+  let s = (raw ?? '').toString().trim();
+  const m = s.match(/^="?(.*?)"?$/);
+  if (m) s = m[1];
+  s = s.replace(/^"+|"+$/g, '').trim();
+  return s;
+}
+
+/* ============================================================
+   ETIQUETAS (10cm x 8cm) — compartido entre las dos pestañas
+   ============================================================ */
+function imprimirEtiquetas(labels){
+  if (!labels.length){
+    alert('No hay filas visibles para generar etiquetas. Ajusta la búsqueda o el filtro e inténtalo de nuevo.');
+    return;
+  }
+  const area = document.getElementById('labelsArea');
+  area.innerHTML = labels.map(l => `
+    <div class="etiqueta">
+      <div class="et-market">${escapeHtml(l.market)}</div>
+      <div class="et-cliente">${l.clienteLabel ? escapeHtml(l.clienteLabel) + ': ' : ''}${escapeHtml(l.cliente) || '&nbsp;'}</div>
+      <div class="et-doc">${escapeHtml(l.nDocLabel || 'N° documento')}: <b>${escapeHtml(l.nDoc)}</b></div>
+      <div class="et-oc">${escapeHtml(l.ocLabel)}: ${escapeHtml(l.oc) || '—'}</div>
+      ${l.extraLabel ? `<div class="et-extra">${escapeHtml(l.extraLabel)}: ${escapeHtml(l.extraValue) || '—'}</div>` : ''}
+      ${(l.cantidad !== undefined && l.cantidad !== null && l.cantidad !== '') ? `<div class="et-cantidad">Cantidad: <b>${escapeHtml(l.cantidad)}</b> unidad(es)</div>` : ''}
+      <div class="et-fecha">${escapeHtml(l.fecha) || '—'}</div>
+    </div>
+  `).join('');
+
+  const styleTag = document.createElement('style');
+  styleTag.id = 'labelPageStyle';
+  styleTag.textContent = '@media print{ @page{ size:10cm 8cm; margin:0; } }';
+  document.head.appendChild(styleTag);
+  document.body.classList.add('printing-labels');
+
+  const cleanup = () => {
+    document.body.classList.remove('printing-labels');
+    area.innerHTML = '';
+    styleTag.remove();
+    window.removeEventListener('afterprint', cleanup);
+  };
+  window.addEventListener('afterprint', cleanup);
+  window.print();
+}
+
+/* ============================================================
+   TAB 1: CRUCE POR CANAL
+   ============================================================ */
 let bodegaRows = [];
 let mktRows = [];
 let crossed = [];
@@ -245,6 +443,7 @@ const fileMktInput = document.getElementById('fileMkt');
 const btnCruzar = document.getElementById('btnCruzar');
 const btnExportar = document.getElementById('btnExportar');
 const btnImprimir = document.getElementById('btnImprimir');
+const btnEtiquetas = document.getElementById('btnEtiquetas');
 const statusMsg = document.getElementById('statusMsg');
 
 btnImprimir.addEventListener('click', () => window.print());
@@ -268,10 +467,6 @@ function cerrarDetalle(){ detailModal.classList.remove('open'); }
 btnCerrarDetalle.addEventListener('click', cerrarDetalle);
 detailModal.addEventListener('click', e => { if (e.target === detailModal) cerrarDetalle(); });
 
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { cerrarModal(); cerrarDetalle(); }
-});
-
 fileBodegaInput.addEventListener('change', e => {
   fBodega = e.target.files[0] || null;
   document.getElementById('fileBodegaName').textContent = fBodega ? fBodega.name : '';
@@ -284,14 +479,6 @@ fileMktInput.addEventListener('change', e => {
 });
 function updateCruzarBtn(){
   btnCruzar.disabled = !(fBodega && fMkt);
-}
-
-function normalizeSku(raw){
-  let s = (raw ?? '').toString().trim();
-  const m = s.match(/^="?(.*?)"?$/);
-  if (m) s = m[1];
-  s = s.replace(/^"+|"+$/g, '').trim();
-  return s;
 }
 
 function extraerNDoc(documento){
@@ -311,17 +498,6 @@ function tipoDocDe(documento){
   if (up.includes('BOLETA')) return 'Boleta';
   if (!up.trim()) return 'Sin dato';
   return 'Otro';
-}
-
-function parseFechaBodega(s){
-  const m = (s||'').match(/(\d{4})-(\d{2})-(\d{2})/);
-  if (!m) return null;
-  return new Date(+m[1], +m[2]-1, +m[3]);
-}
-function parseFechaAnymarket(s){
-  const m = (s||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  if (!m) return null;
-  return new Date(+m[3], +m[2]-1, +m[1]);
 }
 
 async function parseBodegaFile(file){
@@ -445,19 +621,20 @@ function regionDe(m){
 
 // Clasifica un documento completo de bodega (1 boleta = 1 pedido real, con 1 o más productos).
 // Prioridad: 1 Falabella · 2 Mercado Flex · 3 Mercado Libre · 4 Otras boletas (Walmart/Paris/Ripley)
-//            · 5 Pedidos Web · 6 Cotizaciones (incluye Boleta/Factura/Otro sin cruce)
-// Cotización y Pedido Web son 100% nativos de Bsale y NUNCA se cruzan con Anymarket (confirmado
-// por el negocio) — no se intenta buscar coincidencia para esos dos tipos, bajo ninguna circunstancia.
+//            · 5 Cotizaciones (incluye Boleta/Factura/Otro sin cruce)
+// Los "Pedido Web" se manejan por completo en la pestaña "Pedidos Web" (otro reporte, otro flujo) y
+// se filtran fuera de este cruce (ver agrupar()) antes de llegar a esta función.
+// Cotización es 100% nativa de Bsale y NUNCA se cruza con Anymarket (confirmado por el negocio) —
+// no se intenta buscar coincidencia para ese tipo de documento, bajo ninguna circunstancia.
 function clasificarDocumento(tipoDoc, nDoc, boletaIndex){
-  if (tipoDoc === 'Cotización') return { market: 'Cotización', tier: 6, oc: '', region: '' };
-  if (tipoDoc === 'Pedido Web') return { market: 'Tienda Web', tier: 5, oc: '', region: '' };
+  if (tipoDoc === 'Cotización') return { market: 'Cotización', tier: 5, oc: '', region: '', cliente: '' };
 
   const matches = boletaIndex.get(normalizeBoleta(nDoc)) || [];
   const best = matches[0] || null;
 
   if (tipoDoc === 'Mercado Libre') {
-    // Bodega ya lo etiqueta directo; si además cruza (cuando se active en Anymarket), se enriquece OC/Región.
-    return { market: 'Mercado Libre', tier: 3, oc: best ? best.codMarketplace : '', region: regionDe(best) };
+    // Bodega ya lo etiqueta directo; si además cruza (cuando se active en Anymarket), se enriquece OC/Región/Cliente.
+    return { market: 'Mercado Libre', tier: 3, oc: best ? best.codMarketplace : '', region: regionDe(best), cliente: best ? best.cliente : '' };
   }
 
   if (best) {
@@ -468,14 +645,15 @@ function clasificarDocumento(tipoDoc, nDoc, boletaIndex){
     else if (logistica.includes('FLEX')) { market = 'Mercado Flex'; tier = 2; }
     else if (mp.includes('MERCADO LIBRE') || mp.includes('MERCADO LIVRE')) { market = 'Mercado Libre'; tier = 3; }
     else { market = best.marketplace || 'Otro canal'; tier = 4; }
-    return { market, tier, oc: best.codMarketplace || '', region: regionDe(best) };
+    return { market, tier, oc: best.codMarketplace || '', region: regionDe(best), cliente: best.cliente || '' };
   }
 
   // Boleta/Factura/Otro que no encontró su folio en Anymarket.
-  return { market: 'Sin identificar', tier: 6, oc: '', region: '' };
+  return { market: 'Sin identificar', tier: 5, oc: '', region: '', cliente: '' };
 }
 
 // Agrupa las líneas de bodega por documento (N°doc): 1 fila por boleta, con 1 o más SKUs adentro.
+// Los documentos "Pedido Web" se excluyen por completo: viven en la pestaña "Pedidos Web".
 function agrupar(bRows, boletaIndex){
   const groups = new Map();
   for (const b of bRows) {
@@ -488,6 +666,8 @@ function agrupar(bRows, boletaIndex){
   for (const [documento, items] of groups.entries()) {
     const nDoc = extraerNDoc(documento);
     const tipoDoc = tipoDocDe(documento);
+    if (tipoDoc === 'Pedido Web') continue;
+
     const clasif = clasificarDocumento(tipoDoc, nDoc, boletaIndex);
 
     const titulos = new Set(items.map(b => b.sku)).size;
@@ -500,7 +680,7 @@ function agrupar(bRows, boletaIndex){
 
     result.push({
       documento, nDoc, tipoDoc,
-      market: clasif.market, tier: clasif.tier, oc: clasif.oc, region: clasif.region,
+      market: clasif.market, tier: clasif.tier, oc: clasif.oc, region: clasif.region, cliente: clasif.cliente,
       fecha: items[0].fecha, titulos, cantidad, lineDetails,
     });
   }
@@ -518,12 +698,11 @@ const TIER_LABEL = {
   2: '2 · Mercado Flex',
   3: '3 · Mercado Libre',
   4: '4 · Otras boletas',
-  5: '5 · Pedidos Web',
-  6: '6 · Cotizaciones',
+  5: '5 · Cotizaciones',
 };
 
 function renderChips(rows){
-  const counts = {1:0,2:0,3:0,4:0,5:0,6:0};
+  const counts = {1:0,2:0,3:0,4:0,5:0};
   rows.forEach(r => counts[r.tier]++);
   const chips = document.getElementById('chips');
   chips.innerHTML = `
@@ -532,8 +711,7 @@ function renderChips(rows){
     <span class="chip t2">2 · Mercado Flex: ${counts[2]}</span>
     <span class="chip t3">3 · Mercado Libre: ${counts[3]}</span>
     <span class="chip t4">4 · Otras boletas: ${counts[4]}</span>
-    <span class="chip t5">5 · Pedidos Web: ${counts[5]}</span>
-    <span class="chip t6">6 · Cotizaciones: ${counts[6]}</span>
+    <span class="chip t5">5 · Cotizaciones: ${counts[5]}</span>
   `;
 }
 
@@ -545,11 +723,6 @@ function renderFiltroTiers(rows){
   select.innerHTML = '<option value="">Todas las prioridades</option>' +
     presentes.map(t => `<option value="${t}">${TIER_LABEL[t]}</option>`).join('');
   if (presentes.includes(Number(valorActual))) select.value = valorActual;
-}
-
-function escapeHtml(s){
-  return (s ?? '').toString()
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 function renderTable(rows){
@@ -587,7 +760,7 @@ function abrirDetalle(documento){
   if (!row) return;
   document.getElementById('detalleTitulo').textContent = `${row.tipoDoc} N° ${row.nDoc || '-'}`;
   document.getElementById('detalleSub').textContent =
-    `${row.market} · Fecha ${row.fecha || '-'} · ${row.titulos} título(s) · ${row.cantidad} unidad(es) en total`;
+    `${row.market} · Fecha ${row.fecha || '-'}${row.cliente ? ' · Cliente ' + row.cliente : ''} · ${row.titulos} título(s) · ${row.cantidad} unidad(es) en total`;
   const body = document.getElementById('detalleBody');
   body.innerHTML = row.lineDetails.map(l => `
     <tr>
@@ -602,7 +775,7 @@ function abrirDetalle(documento){
   detailModal.classList.add('open');
 }
 
-function applyFilters(){
+function filteredRowsTab1(){
   const q = document.getElementById('searchBox').value.trim().toLowerCase();
   const tierFiltro = document.getElementById('filterTier').value;
   let rows = crossed;
@@ -617,8 +790,9 @@ function applyFilters(){
       return hay.includes(q);
     });
   }
-  renderTable(rows);
+  return rows;
 }
+function applyFilters(){ renderTable(filteredRowsTab1()); }
 
 document.getElementById('searchBox').addEventListener('input', applyFilters);
 document.getElementById('filterTier').addEventListener('change', applyFilters);
@@ -644,7 +818,8 @@ btnCruzar.addEventListener('click', async () => {
     renderTable(crossed);
     btnExportar.style.display = 'inline-block';
     btnImprimir.style.display = 'inline-flex';
-    statusMsg.textContent = `Cruce listo: ${bodegaRows.length} líneas de bodega agrupadas en ${crossed.length} documentos, ${mktRows.length} líneas de canales.`;
+    btnEtiquetas.style.display = 'inline-flex';
+    statusMsg.textContent = `Cruce listo: ${bodegaRows.length} líneas de bodega agrupadas en ${crossed.length} documentos (Pedidos Web excluidos), ${mktRows.length} líneas de canales.`;
     cerrarModal();
   } catch (err) {
     console.error(err);
@@ -662,6 +837,7 @@ btnExportar.addEventListener('click', () => {
     'N° doc': r.nDoc,
     'Tipo doc': r.tipoDoc,
     'OC': r.oc,
+    'Cliente': r.cliente,
     'Fecha': r.fecha,
     'Región': r.region,
     'Títulos': r.titulos,
@@ -672,6 +848,311 @@ btnExportar.addEventListener('click', () => {
   XLSX.utils.book_append_sheet(wb, ws, 'Cruce');
   const hoy = new Date().toISOString().slice(0,10);
   XLSX.writeFile(wb, `cruce_bodega_canal_${hoy}.xlsx`);
+});
+
+btnEtiquetas.addEventListener('click', () => {
+  const rows = filteredRowsTab1();
+  const labels = rows.map(r => ({
+    market: r.market, cliente: r.cliente, nDoc: r.nDoc || r.documento,
+    ocLabel: 'OC', oc: r.oc, cantidad: r.cantidad, fecha: r.fecha,
+  }));
+  imprimirEtiquetas(labels);
+});
+
+/* ============================================================
+   TAB 2: PEDIDOS WEB
+   Reporte nativo de Bsale de plazamusica.cl. Solo se trabaja con
+   pedidos en estado "Pagado" (la cola real de trabajo para bodega);
+   los demás estados (Por pagar, Listo para despacho, Por retirar,
+   Despachado) no se muestran en esta pestaña.
+   ============================================================ */
+let webRowsAll = [];
+
+// Solo interesan los pedidos que se preparan desde Bodega Web o Casa Matriz — el resto
+// (retiros/despachos que gestiona cada local Plaza Música por su cuenta) no se muestra acá.
+const SUCURSALES_PERMITIDAS = new Set(['BODEGA WEB', 'CASA MATRIZ']);
+let webGrouped = [];
+
+function parseCSV(text){
+  text = text.replace(/^﻿/, '');
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (inQuotes){
+      if (c === '"'){
+        if (text[i+1] === '"'){ field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ','){ row.push(field); field = ''; }
+      else if (c === '\r'){ /* se ignora, el salto real lo maneja \n */ }
+      else if (c === '\n'){ row.push(field); rows.push(row); row = []; field = ''; }
+      else field += c;
+    }
+  }
+  if (field !== '' || row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r => !(r.length === 1 && r[0].trim() === ''));
+}
+
+async function parseWebFile(file){
+  const text = await file.text();
+  const table = parseCSV(text);
+  if (!table.length) return [];
+  const header = table[0].map(h => h.replace(/^﻿/,'').trim());
+
+  // El reporte trae dos columnas llamadas literalmente "Número": la primera es el N° de
+  // pedido, la segunda es el número de la calle. Se distinguen por orden de aparición.
+  const idxNumero = header.indexOf('Número');
+  const idxNumeroCalle = header.indexOf('Número', idxNumero + 1);
+
+  const col = {};
+  ['Documento','Estado','Cliente Nombre','Cliente Apellidos','Cliente Email','Cliente Teléfono',
+   'Fecha','Hora','Tipo de retiro','Región','Calle','Comuna','Medio de pago','Total',
+   'Sucursal de retiro','SKU','Nombre producto','Cantidad','Comentario despacho','Despacho']
+    .forEach(name => { col[name] = header.indexOf(name); });
+
+  const rows = [];
+  for (let i = 1; i < table.length; i++){
+    const r = table[i];
+    if (!r || r.length < 2 || r.every(c => (c||'').trim() === '')) continue;
+    rows.push({
+      numero: (r[idxNumero] || '').trim(),
+      documento: (r[col['Documento']] || '').trim(),
+      estado: (r[col['Estado']] || '').trim(),
+      clienteNombre: (r[col['Cliente Nombre']] || '').trim(),
+      clienteApellidos: (r[col['Cliente Apellidos']] || '').trim(),
+      clienteEmail: (r[col['Cliente Email']] || '').trim(),
+      clienteTelefono: (r[col['Cliente Teléfono']] || '').trim(),
+      fecha: (r[col['Fecha']] || '').trim(),
+      hora: (r[col['Hora']] || '').trim(),
+      tipoRetiro: (r[col['Tipo de retiro']] || '').trim(),
+      region: (r[col['Región']] || '').trim(),
+      calle: (r[col['Calle']] || '').trim(),
+      comuna: (r[col['Comuna']] || '').trim(),
+      numeroCalle: (r[idxNumeroCalle] || '').trim(),
+      medioPago: (r[col['Medio de pago']] || '').trim(),
+      total: (r[col['Total']] || '').trim(),
+      sucursalRetiro: (r[col['Sucursal de retiro']] || '').trim(),
+      sku: normalizeSku(r[col['SKU']]),
+      producto: (r[col['Nombre producto']] || '').trim(),
+      cantidad: (r[col['Cantidad']] || '').trim(),
+      comentarioDespacho: (r[col['Comentario despacho']] || '').trim(),
+      courier: (r[col['Despacho']] || '').trim(),
+    });
+  }
+  return rows;
+}
+
+function destinoDe(r){
+  if (r.tipoRetiro === 'Retiro') return r.sucursalRetiro || '—';
+  const partes = [r.region, r.comuna].filter(Boolean);
+  return partes.length ? partes.join(' / ') : '—';
+}
+
+function parseFechaHoraWeb(fecha, hora){
+  const m = (fecha||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (!m) return null;
+  const partes = (hora||'0:0:0').split(':').map(Number);
+  return new Date(+m[3], +m[2]-1, +m[1], partes[0]||0, partes[1]||0, partes[2]||0);
+}
+
+function agruparWeb(rows){
+  const groups = new Map();
+  for (const r of rows){
+    const key = r.numero || '(sin número)';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(r);
+  }
+  const result = [];
+  for (const [numero, items] of groups.entries()){
+    const first = items[0];
+    const titulos = new Set(items.map(i => i.sku)).size;
+    const cantidad = items.reduce((sum, i) => sum + (parseFloat((i.cantidad||'0').replace(',','.')) || 0), 0);
+    result.push({
+      numero, documento: first.documento, estado: first.estado,
+      cliente: `${first.clienteNombre} ${first.clienteApellidos}`.trim(),
+      clienteEmail: first.clienteEmail, clienteTelefono: first.clienteTelefono,
+      tipoRetiro: first.tipoRetiro, destino: destinoDe(first),
+      calle: first.calle, comuna: first.comuna, numeroCalle: first.numeroCalle, region: first.region,
+      sucursalRetiro: first.sucursalRetiro, medioPago: first.medioPago, total: first.total,
+      comentarioDespacho: first.comentarioDespacho, courier: first.courier,
+      fecha: first.fecha, hora: first.hora,
+      titulos, cantidad,
+      lineDetails: items.map(i => ({ sku: i.sku, producto: i.producto, cantidad: i.cantidad })),
+    });
+  }
+  // Más antiguos primero: son los que llevan más tiempo esperando ser procesados.
+  result.sort((a, b) => {
+    const da = parseFechaHoraWeb(a.fecha, a.hora), db = parseFechaHoraWeb(b.fecha, b.hora);
+    if (da && db) return da - db;
+    return 0;
+  });
+  return result;
+}
+
+function renderChipsWeb(rows){
+  const totalRetiro = rows.filter(r => r.tipoRetiro === 'Retiro').length;
+  const totalDespacho = rows.filter(r => r.tipoRetiro === 'Despacho').length;
+  document.getElementById('chipsWeb').innerHTML = `
+    <span class="chip total">Pedidos por procesar (Pagado): ${rows.length}</span>
+    <span class="chip t1">Retiro en tienda: ${totalRetiro}</span>
+    <span class="chip t2">Despacho a domicilio: ${totalDespacho}</span>
+  `;
+}
+
+function renderTableWeb(rows){
+  const tbody = document.getElementById('resultBodyWeb');
+  if (!rows.length){
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No hay pedidos Pagado pendientes para este filtro.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td class="chk-cell"><span class="chk-box"></span></td>
+      <td><button class="doc-link" data-num="${escapeHtml(r.numero)}">${escapeHtml(r.numero)}</button></td>
+      <td>${escapeHtml(r.cliente) || '<span class="muted">—</span>'}</td>
+      <td>${escapeHtml(r.tipoRetiro)}</td>
+      <td>${escapeHtml(r.destino)}</td>
+      <td>${escapeHtml(r.courier) || '<span class="muted">—</span>'}</td>
+      <td>${escapeHtml(r.fecha)} ${escapeHtml((r.hora||'').slice(0,5))}</td>
+    </tr>
+  `).join('');
+  tbody.querySelectorAll('.doc-link').forEach(btn => {
+    btn.addEventListener('click', () => abrirDetalleWeb(btn.getAttribute('data-num')));
+  });
+}
+
+function abrirDetalleWeb(numero){
+  const row = webGrouped.find(r => r.numero === numero);
+  if (!row) return;
+  document.getElementById('detalleTituloWeb').textContent = `Pedido Web N° ${row.numero}`;
+  const direccion = row.tipoRetiro === 'Retiro'
+    ? `Retiro en ${row.sucursalRetiro || '—'}`
+    : ([row.calle, row.numeroCalle, row.comuna, row.region].filter(Boolean).join(', ') || '—');
+  document.getElementById('detalleSubWeb').innerHTML =
+    `${escapeHtml(row.cliente) || 'Sin nombre'} · ${escapeHtml(row.fecha)} ${escapeHtml((row.hora||'').slice(0,5))} · ${row.titulos} título(s) · ${row.cantidad} unidad(es) en total<br>` +
+    `${escapeHtml(direccion)}<br>` +
+    `${escapeHtml(row.clienteEmail) || '—'} · ${escapeHtml(row.clienteTelefono) || '—'} · ${escapeHtml(row.medioPago) || '—'} · Total: ${escapeHtml(row.total) || '—'}`;
+  const body = document.getElementById('detalleBodyWeb');
+  body.innerHTML = row.lineDetails.map(l => `
+    <tr><td>${escapeHtml(l.sku)}</td><td>${escapeHtml(l.producto)}</td><td>${escapeHtml(l.cantidad)}</td></tr>
+  `).join('');
+  detailModalWeb.classList.add('open');
+}
+
+function filteredRowsWeb(){
+  const q = document.getElementById('searchBoxWeb').value.trim().toLowerCase();
+  const tipoRetiroFiltro = document.getElementById('filterTipoRetiroWeb').value;
+  let rows = webGrouped;
+  if (tipoRetiroFiltro) rows = rows.filter(r => r.tipoRetiro === tipoRetiroFiltro);
+  if (q){
+    rows = rows.filter(r => {
+      const hay = [
+        r.numero, r.cliente, r.destino, r.tipoRetiro, r.courier,
+        ...r.lineDetails.map(l => l.sku),
+        ...r.lineDetails.map(l => l.producto),
+      ].join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+  }
+  return rows;
+}
+function applyFiltersWeb(){ renderTableWeb(filteredRowsWeb()); }
+
+document.getElementById('searchBoxWeb').addEventListener('input', applyFiltersWeb);
+document.getElementById('filterTipoRetiroWeb').addEventListener('change', applyFiltersWeb);
+
+const uploadModalWeb = document.getElementById('uploadModalWeb');
+const btnAbrirCargaWeb = document.getElementById('btnAbrirCargaWeb');
+const btnCerrarModalWeb = document.getElementById('btnCerrarModalWeb');
+const fileWebInput = document.getElementById('fileWeb');
+const btnCargarWeb = document.getElementById('btnCargarWeb');
+const btnImprimirWeb = document.getElementById('btnImprimirWeb');
+const btnEtiquetasWeb = document.getElementById('btnEtiquetasWeb');
+const statusMsgWeb = document.getElementById('statusMsgWeb');
+let fWeb = null;
+
+function abrirModalWeb(){ uploadModalWeb.classList.add('open'); }
+function cerrarModalWeb(){ uploadModalWeb.classList.remove('open'); }
+btnAbrirCargaWeb.addEventListener('click', abrirModalWeb);
+btnCerrarModalWeb.addEventListener('click', cerrarModalWeb);
+uploadModalWeb.addEventListener('click', e => { if (e.target === uploadModalWeb) cerrarModalWeb(); });
+
+const detailModalWeb = document.getElementById('detailModalWeb');
+const btnCerrarDetalleWeb = document.getElementById('btnCerrarDetalleWeb');
+function cerrarDetalleWeb(){ detailModalWeb.classList.remove('open'); }
+btnCerrarDetalleWeb.addEventListener('click', cerrarDetalleWeb);
+detailModalWeb.addEventListener('click', e => { if (e.target === detailModalWeb) cerrarDetalleWeb(); });
+
+fileWebInput.addEventListener('change', e => {
+  fWeb = e.target.files[0] || null;
+  document.getElementById('fileWebName').textContent = fWeb ? fWeb.name : '';
+  btnCargarWeb.disabled = !fWeb;
+});
+
+btnImprimirWeb.addEventListener('click', () => window.print());
+
+btnCargarWeb.addEventListener('click', async () => {
+  statusMsgWeb.textContent = 'Procesando...';
+  statusMsgWeb.classList.remove('error');
+  btnCargarWeb.disabled = true;
+  try {
+    const parsed = await parseWebFile(fWeb);
+    if (!parsed.length) throw new Error('No se pudieron leer filas del reporte de Pedidos Web.');
+    webRowsAll = parsed;
+    // El reporte trae mezclados pedidos "PEDIDO WEB T" y "MERCADO LIBRE GLD MUSICA" en la columna
+    // Documento — Mercado Libre se gestiona en la pestaña "Cruce por Canal", acá solo interesa Pedido Web.
+    const pagados = parsed.filter(r =>
+      r.estado === 'Pagado' &&
+      SUCURSALES_PERMITIDAS.has((r.sucursalRetiro || '').toUpperCase().trim()) &&
+      (r.documento || '').toUpperCase().includes('PEDIDO WEB')
+    );
+    webGrouped = agruparWeb(pagados);
+
+    renderChipsWeb(webGrouped);
+    document.getElementById('resultsPanelWeb').style.display = 'block';
+    document.getElementById('searchBoxWeb').value = '';
+    document.getElementById('filterTipoRetiroWeb').value = '';
+    renderTableWeb(webGrouped);
+    btnImprimirWeb.style.display = 'inline-flex';
+    btnEtiquetasWeb.style.display = 'inline-flex';
+    statusMsgWeb.textContent = `Carga lista: ${webGrouped.length} pedidos Pagado de Bodega Web / Casa Matriz (de ${new Set(parsed.map(r=>r.numero)).size} pedidos totales en el reporte).`;
+    cerrarModalWeb();
+  } catch (err){
+    console.error(err);
+    statusMsgWeb.textContent = 'Error: ' + err.message;
+    statusMsgWeb.classList.add('error');
+  } finally {
+    btnCargarWeb.disabled = false;
+  }
+});
+
+btnEtiquetasWeb.addEventListener('click', () => {
+  const rows = filteredRowsWeb();
+  const labels = rows.map(r => {
+    const esRetiro = r.tipoRetiro === 'Retiro';
+    const direccionCompleta = [r.calle, r.numeroCalle, r.comuna, r.region].filter(Boolean).join(' / ');
+    return {
+      market: 'PLAZA MUSICA',
+      clienteLabel: 'CLIENTE', cliente: r.cliente,
+      nDoc: r.numero, nDocLabel: 'N°Pedido',
+      ocLabel: esRetiro ? 'Retiro en' : 'Despacho a',
+      oc: esRetiro ? (r.sucursalRetiro || 'Retiro') : (direccionCompleta || r.destino),
+      extraLabel: esRetiro ? 'Comentario' : 'Courier',
+      extraValue: esRetiro ? r.comentarioDespacho : r.courier,
+      fecha: `${r.fecha} ${(r.hora||'').slice(0,5)}`.trim(),
+    };
+  });
+  imprimirEtiquetas(labels);
+});
+
+/* ============================================================
+   TECLA ESCAPE: cierra cualquier modal abierto
+   ============================================================ */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { cerrarModal(); cerrarDetalle(); cerrarModalWeb(); cerrarDetalleWeb(); }
 });
 </script>
 </body>
