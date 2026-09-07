@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ventas Locales — Plaza Música</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --card-shadow:    0 1px 2px rgba(11,11,11,0.06), 0 1px 12px rgba(11,11,11,0.04);
+    --status-good:     #0ca30c;
+    --status-warning:  #fab219;
+    --status-critical: #d03b3b;
+    --diverging-pos:   #2a78d6;
+    --diverging-neg:   #e34948;
+    --success-text:    #006300;
+    --accent-bg:       #eef4fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --page-plane:     #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --card-shadow:    0 1px 2px rgba(0,0,0,0.4), 0 1px 12px rgba(0,0,0,0.3);
+      --diverging-pos:  #3987e5;
+      --diverging-neg:  #e66767;
+      --success-text:   #0ca30c;
+      --accent-bg:      #182230;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --page-plane:     #0d0d0d;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --gridline:       #2c2c2a;
+    --baseline:       #383835;
+    --border:         rgba(255,255,255,0.10);
+    --card-shadow:    0 1px 2px rgba(0,0,0,0.4), 0 1px 12px rgba(0,0,0,0.3);
+    --diverging-pos:  #3987e5;
+    --diverging-neg:  #e66767;
+    --success-text:   #0ca30c;
+    --accent-bg:      #182230;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page-plane);
+    color: var(--text-primary);
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 28px 20px 64px; }
+
+  header.top {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  header.top h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  header.top p.sub { margin: 0; color: var(--text-secondary); font-size: 13.5px; }
+  .theme-toggle {
+    border: 1px solid var(--border); background: var(--surface-1); color: var(--text-secondary);
+    border-radius: 8px; padding: 7px 12px; font-size: 12.5px; cursor: pointer;
+  }
+  .theme-toggle:hover { background: var(--accent-bg); }
+
+  .period-row {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .period-row label { font-size: 12.5px; color: var(--text-secondary); }
+  .period-row select {
+    border: 1px solid var(--border); border-radius: 7px; padding: 7px 10px; font-size: 13px;
+    background: var(--surface-1); color: var(--text-primary);
+  }
+  .btn {
+    border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-primary { background: var(--diverging-pos); color: #fff; }
+  .btn-secondary { background: var(--status-good); color: #fff; }
+  .btn:disabled { background: var(--baseline); cursor: not-allowed; }
+
+  .kpi-row {
+    display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 22px;
+  }
+  @media (max-width: 900px) { .kpi-row { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  .stat-tile {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 14px 12px; box-shadow: var(--card-shadow);
+  }
+  .stat-tile .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+  .stat-tile .value { font-size: 21px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .stat-tile .value.neg { color: var(--diverging-neg); }
+  .stat-tile .value.pos { color: var(--success-text); }
+  .stat-tile .foot { font-size: 11.5px; color: var(--text-muted); margin-top: 3px; }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; border-bottom: 1px solid var(--gridline); }
+  .tab {
+    appearance: none; border: none; background: transparent; color: var(--text-secondary);
+    font-size: 13px; font-weight: 500; padding: 9px 14px; border-radius: 8px 8px 0 0;
+    cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .tab:hover { background: var(--surface-1); }
+  .tab.active { color: var(--text-primary); border-bottom: 2px solid var(--diverging-pos); background: var(--surface-1); }
+
+  .panel-card {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: var(--card-shadow); padding: 16px 18px 18px; margin-bottom: 20px;
+  }
+  .panel-card h3 { font-size: 14px; margin: 0 0 14px; }
+
+  .table-scroll { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+  .report-table { width: 100%; min-width: 640px; border-collapse: collapse; background: var(--surface-1); font-size: 12.6px; }
+  .report-table th {
+    text-align: right; font-size: 10.6px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .03em; padding: 8px 10px;
+    border-bottom: 1px solid var(--gridline); white-space: nowrap;
+  }
+  .report-table th:first-child { text-align: left; }
+  .report-table td { padding: 7px 10px; border-bottom: 1px solid var(--gridline); white-space: nowrap; text-align: right; }
+  .report-table td:first-child { text-align: left; }
+  .report-table tbody tr:hover { background: color-mix(in srgb, var(--surface-1) 92%, var(--text-primary) 8%); }
+  .report-table td.num.neg { color: var(--diverging-neg); }
+  .report-table td.num.pos { color: var(--success-text); }
+  tr.totals-row td {
+    font-weight: 700; border-top: 2px solid var(--baseline); border-bottom: none;
+    background: color-mix(in srgb, var(--surface-1) 94%, var(--text-primary) 6%);
+  }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600;
+    padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+  }
+  .status-pill .dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+  .status-good { color: var(--status-good); background: color-mix(in srgb, var(--status-good) 14%, transparent); }
+  .status-good .dot { background: var(--status-good); }
+  .status-warning { color: #8a6200; background: color-mix(in srgb, var(--status-warning) 22%, transparent); }
+  .status-warning .dot { background: var(--status-warning); }
+  .status-critical { color: var(--status-critical); background: color-mix(in srgb, var(--status-critical) 16%, transparent); }
+  .status-critical .dot { background: var(--status-critical); }
+  .status-sin { color: var(--text-muted); background: color-mix(in srgb, var(--text-muted) 14%, transparent); }
+  .status-sin .dot { background: var(--text-muted); }
+
+  .note-box {
+    margin-top: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px;
+    background: var(--page-plane); font-size: 12.5px; color: var(--text-secondary); line-height: 1.6;
+  }
+
+  .empty-state {
+    text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 13.5px;
+    border: 1px dashed var(--border); border-radius: 12px; background: var(--surface-1);
+  }
+  .empty-state.error { color: var(--diverging-neg); border-color: var(--diverging-neg); text-align: left; }
+  .empty-state code { font-size: 10.5px; word-break: break-all; color: var(--text-muted); }
+
+  .chart-wrap { position: relative; height: 280px; }
+
+  footer.gen { margin-top: 26px; font-size: 11.5px; color: var(--text-muted); text-align: center; }
+
+  @media (max-width: 720px) {
+    .report-table { font-size: 11.5px; }
+    .report-table td, .report-table th { padding: 6px 6px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Ventas Locales — Plaza Música</h1>
+      <p class="sub" id="pageSub">Cargando datos…</p>
+    </div>
+    <button class="theme-toggle" id="themeToggle">Modo oscuro</button>
+  </header>
+
+  <div class="period-row">
+    <label>Desde</label>
+    <select id="fromMonth"></select>
+    <label>Hasta</label>
+    <select id="toMonth"></select>
+    <button class="btn btn-primary" id="refreshBtn">Actualizar datos</button>
+    <button class="btn btn-secondary" id="exportBtn">Descargar Excel</button>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="resumen">Resumen Ejecutivo</button>
+    <button class="tab" data-tab="local">Ventas por Local</button>
+    <button class="tab" data-tab="finde">Semana vs Finde</button>
+    <button class="tab" data-tab="ticket">Ticket Promedio</button>
+    <button class="tab" data-tab="dia">Ventas por Día</button>
+    <button class="tab" data-tab="devoluciones">Devoluciones</button>
+    <button class="tab" data-tab="ranking">Ranking Mensual</button>
+    <button class="tab" data-tab="acumulado">Acumulado</button>
+  </div>
+
+  <div id="content">
+    <div class="empty-state">Cargando ventas desde Google Sheets…</div>
+  </div>
+
+  <footer class="gen">Plaza Música · Informe de ventas por local — datos leídos en vivo desde Google Sheets.</footer>
+</div>
+
+<script>
+/* =========================================================
+   CONFIGURACIÓN
+   ========================================================= */
+const SHEET_ID = "1-oCZq71RxeXUc3fjWH1op64XK62wUThBWm95RVEsAbU";
+const SHEET_NAME = "datos_web";
+// Crear en https://console.cloud.google.com -> APIs & Servicios -> Credenciales -> Crear clave de API,
+// habilitar "Google Sheets API" y restringir la clave a ese API + al dominio donde se publique este HTML.
+const GOOGLE_API_KEY = "AIzaSyBnbaC29g1yAPkoPM35YDQzuQjc7atu18Q";
+
+const WEEKDAYS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const fmtCLP = n => (n<0?'-':'') + '$' + Math.round(Math.abs(n)).toLocaleString('es-CL');
+const fmtPct = n => (n*100).toFixed(1) + '%';
+
+let RECORDS = [];
+let charts = {};
+let activeTab = 'resumen';
+
+/* =========================================================
+   TEMA (claro/oscuro)
+   ========================================================= */
+const themeToggle = document.getElementById('themeToggle');
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  themeToggle.textContent = t === 'dark' ? 'Modo claro' : 'Modo oscuro';
+}
+applyTheme('light');
+themeToggle.addEventListener('click', ()=>{
+  const current = document.documentElement.getAttribute('data-theme');
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+});
+
+/* =========================================================
+   CARGA DE DATOS — Google Sheets API v4
+   ========================================================= */
+function parseCLNumber(str){
+  if (str === undefined || str === null || str === '') return 0;
+  const cleaned = String(str).replace(/[^\d-]/g,'');
+  const n = parseInt(cleaned,10);
+  return isNaN(n) ? 0 : n;
+}
+
+function parseFechaHora(str){
+  if(!str) return null;
+  const [datePart] = String(str).trim().split(' ');
+  const parts = datePart.split('/');
+  if(parts.length !== 3) return null;
+  const [dd,mm,yyyy] = parts.map(p=>parseInt(p,10));
+  if(!dd||!mm||!yyyy) return null;
+  return new Date(yyyy, mm-1, dd);
+}
+
+function esDevolucionRow(tipoMov, bruto){
+  const mov = (tipoMov||'').toLowerCase();
+  return mov.includes('devoluc') || bruto < 0;
+}
+
+async function fetchSheetRows(){
+  if(!GOOGLE_API_KEY || GOOGLE_API_KEY === 'TU_API_KEY_AQUI'){
+    throw new Error('NO_API_KEY');
+  }
+  const range = encodeURIComponent(SHEET_NAME);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}?key=${GOOGLE_API_KEY}`;
+  const res = await fetch(url);
+  if(!res.ok){
+    let bodyMsg = '';
+    try{ const j = await res.json(); bodyMsg = j.error && j.error.message ? j.error.message : ''; }catch(e){}
+    throw new Error('HTTP_' + res.status + (bodyMsg ? (': ' + bodyMsg) : ''));
+  }
+  const data = await res.json();
+  const values = data.values || [];
+  if(values.length < 2) throw new Error('EMPTY');
+  const headers = values[0];
+  return values.slice(1).map(r=>{
+    const obj = {};
+    headers.forEach((h,i)=> obj[h] = r[i]);
+    return obj;
+  });
+}
+
+async function loadData(){
+  const contentEl = document.getElementById('content');
+  contentEl.innerHTML = '<div class="empty-state">Cargando ventas desde Google Sheets…</div>';
+  try{
+    const rows = await fetchSheetRows();
+    if(!rows.length) throw new Error('EMPTY');
+
+    RECORDS = rows.map(row => {
+      const fecha = parseFechaHora(row['Fecha']);
+      if(!fecha) return null;
+      const bruto = parseCLNumber(row['Venta Total Bruta']);
+      const neto  = parseCLNumber(row['Venta Total Neta']);
+      const tipoMov = row['Tipo Movimiento'] || '';
+      const devol = esDevolucionRow(tipoMov, bruto);
+      const dow = fecha.getDay();
+      return {
+        fecha,
+        monthKey: fecha.getFullYear() + '-' + String(fecha.getMonth()+1).padStart(2,'0'),
+        monthLabel: MONTH_NAMES[fecha.getMonth()] + ' ' + fecha.getFullYear(),
+        weekday: WEEKDAYS[dow],
+        tipoDia: (dow===0||dow===6) ? 'Fin de Semana' : 'Semana',
+        local: (row['Sucursal']||'Sin sucursal').trim(),
+        bruto, neto,
+        devolucion: devol,
+        comprobante: (row['Numero del documento']||'') + '|' + tipoMov
+      };
+    }).filter(Boolean);
+
+    if(!RECORDS.length) throw new Error('EMPTY');
+
+    document.getElementById('pageSub').textContent =
+      'Actualizado: ' + new Date().toLocaleString('es-CL') + ' · ' + RECORDS.length.toLocaleString('es-CL') + ' líneas';
+
+    populateMonthSelectors();
+    renderActiveTab();
+  }catch(err){
+    let msg = 'No se pudo cargar la planilla.';
+    let hint = 'Revisa la clave de API y que la hoja esté compartida como "Cualquier persona con el enlace".';
+    if(err.message === 'NO_API_KEY'){
+      msg = 'Falta configurar la clave de API de Google.';
+      hint = 'Edita la constante GOOGLE_API_KEY en el código con una clave creada en Google Cloud Console (con la Google Sheets API habilitada).';
+    } else if(err.message === 'EMPTY'){
+      msg = 'La hoja se pudo leer pero no trae filas de ventas.';
+      hint = 'Verifica que la pestaña "' + SHEET_NAME + '" sea la que contiene el detalle de Bsale.';
+    } else if(err.message && err.message.startsWith('HTTP_403')){
+      msg = 'Google rechazó la solicitud (403).';
+      hint = 'Revisa que la API key tenga la Google Sheets API habilitada, que no esté restringida a otro dominio, y que la hoja esté compartida como "Cualquier persona con el enlace".';
+    } else if(err.message && err.message.startsWith('HTTP_404')){
+      msg = 'No se encontró la hoja (404).';
+      hint = 'Revisa que SHEET_ID y SHEET_NAME sean correctos.';
+    }
+    document.getElementById('content').innerHTML =
+      `<div class="empty-state error"><strong>${msg}</strong><br><br>${hint}<br><br>
+       <span style="font-size:11px">Error técnico: ${(err && err.message) || err}</span></div>`;
+    document.getElementById('pageSub').textContent = 'Sin datos cargados';
+  }
+}
+
+/* =========================================================
+   SELECTORES DE PERÍODO
+   ========================================================= */
+function populateMonthSelectors(){
+  const months = [...new Set(RECORDS.map(r=>r.monthKey))].sort();
+  const fromSel = document.getElementById('fromMonth');
+  const toSel = document.getElementById('toMonth');
+  fromSel.innerHTML = ''; toSel.innerHTML = '';
+  months.forEach(mk=>{
+    const label = RECORDS.find(r=>r.monthKey===mk).monthLabel;
+    fromSel.innerHTML += `<option value="${mk}">${label}</option>`;
+    toSel.innerHTML += `<option value="${mk}">${label}</option>`;
+  });
+  fromSel.value = months[0];
+  toSel.value = months[months.length-1];
+}
+
+function getSelectedRecords(){
+  const from = document.getElementById('fromMonth').value;
+  const to = document.getElementById('toMonth').value;
+  return RECORDS.filter(r => r.monthKey >= from && r.monthKey <= to);
+}
+function getSelectedMonths(){
+  const from = document.getElementById('fromMonth').value;
+  const to = document.getElementById('toMonth').value;
+  return [...new Set(RECORDS.filter(r=>r.monthKey>=from && r.monthKey<=to).map(r=>r.monthKey))].sort();
+}
+
+/* =========================================================
+   NAVEGACIÓN
+   ========================================================= */
+document.getElementById('tabs').addEventListener('click', e=>{
+  const btn = e.target.closest('button[data-tab]');
+  if(!btn) return;
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  activeTab = btn.dataset.tab;
+  renderActiveTab();
+});
+document.getElementById('fromMonth').addEventListener('change', renderActiveTab);
+document.getElementById('toMonth').addEventListener('change', renderActiveTab);
+document.getElementById('refreshBtn').addEventListener('click', loadData);
+
+function renderActiveTab(){
+  if(!RECORDS.length) return;
+  const renderers = {
+    resumen: renderResumen, local: renderLocal, finde: renderFinde,
+    ticket: renderTicket, dia: renderDia, devoluciones: renderDevoluciones,
+    ranking: renderRanking, acumulado: renderAcumulado
+  };
+  renderers[activeTab]();
+}
+
+/* =========================================================
+   AGREGACIONES BASE
+   ========================================================= */
+function sum(arr, fn){ return arr.reduce((a,r)=>a+fn(r),0); }
+function totalsByLocalMonth(records){
+  const map = {};
+  records.forEach(r=>{
+    map[r.local] = map[r.local] || {};
+    map[r.local][r.monthKey] = (map[r.local][r.monthKey]||0) + r.bruto;
+  });
+  return map;
+}
+function trendPill(pct){
+  if(pct === null) return {cls:'status-sin', label:'s/d'};
+  if(pct > 0.03) return {cls:'status-good', label:'▲ Creciendo'};
+  if(pct < -0.03) return {cls:'status-critical', label:'▼ Cayendo'};
+  return {cls:'status-warning', label:'► Estable'};
+}
+function pillHtml(p){ return `<span class="status-pill ${p.cls}"><span class="dot"></span>${p.label}</span>`; }
+
+/* =========================================================
+   TAB: RESUMEN EJECUTIVO
+   ========================================================= */
+function renderResumen(){
+  const recs = getSelectedRecords();
+  const months = getSelectedMonths();
+  const totalPeriodo = sum(recs, r=>r.bruto);
+
+  const monthTotals = months.map(mk => ({
+    mk, label: recs.find(r=>r.monthKey===mk).monthLabel,
+    total: sum(recs.filter(r=>r.monthKey===mk), r=>r.bruto)
+  }));
+  const last = monthTotals[monthTotals.length-1];
+  const prev = monthTotals[monthTotals.length-2];
+  const momPct = prev ? (last.total - prev.total)/prev.total : null;
+
+  const byLocal = {};
+  recs.forEach(r=> byLocal[r.local] = (byLocal[r.local]||0) + r.bruto);
+  const ranking = Object.entries(byLocal).sort((a,b)=>b[1]-a[1]);
+  const topLocal = ranking[0];
+  const bottomLocal = ranking[ranking.length-1];
+
+  let html = `
+    <div class="kpi-row">
+      <div class="stat-tile">
+        <div class="label">Ventas totales del período</div>
+        <div class="value">${fmtCLP(totalPeriodo)}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="label">Meses incluidos</div>
+        <div class="value">${months.length}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="label">${last ? last.label : '—'}</div>
+        <div class="value">${last ? fmtCLP(last.total) : '—'}</div>
+        ${prev ? `<div class="foot ${momPct>=0?'pos':'neg'}" style="font-weight:600">${momPct>=0?'▲':'▼'} ${fmtPct(Math.abs(momPct))} vs mes anterior</div>` : ''}
+      </div>
+      <div class="stat-tile">
+        <div class="label">Local líder del período</div>
+        <div class="value" style="font-size:15px">${topLocal ? topLocal[0] : '—'}</div>
+        <div class="foot">${topLocal ? fmtCLP(topLocal[1]) : ''}</div>
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <h3>Evolución mensual de ventas</h3>
+      <div class="chart-wrap"><canvas id="chartMensual"></canvas></div>
+    </div>
+
+    <div class="panel-card">
+      <h3>Ranking de locales — total del período</h3>
+      <div class="table-scroll">
+      <table class="report-table">
+        <thead><tr><th>Local</th><th>Total período</th><th>% Particip.</th></tr></thead>
+        <tbody>
+          ${ranking.map(r=>`<tr><td>${r[0]}</td><td class="num">${fmtCLP(r[1])}</td><td class="num">${fmtPct(r[1]/totalPeriodo)}</td></tr>`).join('')}
+          <tr class="totals-row"><td>TOTAL GENERAL</td><td class="num">${fmtCLP(totalPeriodo)}</td><td class="num">100.0%</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <h3>Lectura rápida para el negocio</h3>
+      <div class="note-box">
+        ${prev ? `• Las ventas de ${last.label} ${momPct>=0?'crecieron':'cayeron'} un ${fmtPct(Math.abs(momPct))} frente a ${prev.label}.<br>` : ''}
+        ${topLocal ? `• ${topLocal[0]} es el local líder del período, con ${fmtPct(topLocal[1]/totalPeriodo)} de participación.<br>` : ''}
+        ${bottomLocal && topLocal && bottomLocal[0]!==topLocal[0] ? `• ${bottomLocal[0]} es el local con menor venta acumulada en el rango seleccionado.` : ''}
+      </div>
+    </div>
+  `;
+  document.getElementById('content').innerHTML = html;
+
+  if(charts.mensual) charts.mensual.destroy();
+  charts.mensual = new Chart(document.getElementById('chartMensual'), {
+    type:'line',
+    data:{ labels: monthTotals.map(m=>m.label),
+      datasets:[{ label:'Ventas brutas', data: monthTotals.map(m=>m.total),
+        borderColor:'#2a78d6', backgroundColor:'rgba(42,120,214,.15)', fill:true, tension:.25, pointRadius:4 }] },
+    options:{ plugins:{legend:{display:false}}, scales:{y:{ticks:{callback:v=>'$'+(v/1e6).toFixed(0)+'M'}}} }
+  });
+}
+
+/* =========================================================
+   TAB: VENTAS POR LOCAL
+   ========================================================= */
+function renderLocal(){
+  const recs = getSelectedRecords();
+  const months = getSelectedMonths();
+  const byLocalMonth = totalsByLocalMonth(recs);
+  const locals = Object.keys(byLocalMonth);
+
+  const rows = locals.map(local=>{
+    const perMonth = months.map(mk => byLocalMonth[local][mk] || 0);
+    const total = sum(perMonth, x=>x);
+    const last = perMonth[perMonth.length-1];
+    const prev = perMonth[perMonth.length-2];
+    const varPct = (prev !== undefined && prev !== 0) ? (last-prev)/prev : null;
+    return {local, perMonth, total, varPct};
+  }).sort((a,b)=>b.total-a.total);
+  const grandTotal = sum(rows, r=>r.total);
+
+  let html = `
+    <div class="panel-card">
+      <h3>Ventas por local (${months.length} mes${months.length>1?'es':''})</h3>
+      <div class="table-scroll">
+      <table class="report-table">
+        <thead><tr>
+          <th>Local</th>
+          ${months.map(mk=>`<th>${recs.find(r=>r.monthKey===mk).monthLabel}</th>`).join('')}
+          <th>Total</th><th>% Particip.</th><th>Var. últ. mes</th><th>Tendencia</th>
+        </tr></thead>
+        <tbody>
+        ${rows.map(r=>`<tr>
+          <td>${r.local}</td>
+          ${r.perMonth.map(v=>`<td class="num">${fmtCLP(v)}</td>`).join('')}
+          <td class="num"><strong>${fmtCLP(r.total)}</strong></td>
+          <td class="num">${fmtPct(r.total/grandTotal)}</td>
+          <td class="num">${r.varPct===null?'s/d':fmtPct(r.varPct)}</td>
+          <td>${pillHtml(trendPill(r.varPct))}</td>
+        </tr>`).join('')}
+        <tr class="totals-row">
+          <td>TOTAL GENERAL</td>
+          ${months.map(mk=>`<td class="num">${fmtCLP(sum(rows,r=>r.perMonth[months.indexOf(mk)]))}</td>`).join('')}
+          <td class="num">${fmtCLP(grandTotal)}</td><td class="num">100.0%</td><td></td><td></td>
+        </tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+    <div class="panel-card">
+      <h3>Participación por local</h3>
+      <div class="chart-wrap"><canvas id="chartLocal"></canvas></div>
+    </div>
+  `;
+  document.getElementById('content').innerHTML = html;
+
+  if(charts.local) charts.local.destroy();
+  charts.local = new Chart(document.getElementById('chartLocal'), {
+    type:'bar',
+    data:{ labels: rows.map(r=>r.local), datasets:[{label:'Total', data: rows.map(r=>r.total), backgroundColor:'#2a78d6'}] },
+    options:{ indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{ticks:{callback:v=>'$'+(v/1e6).toFixed(0)+'M'}}} }
+  });
+}
+
+/* =========================================================
+   TAB: SEMANA VS FIN DE SEMANA
+   ========================================================= */
+function renderFinde(){
+  const recs = getSelectedRecords();
+  const locals = [...new Set(recs.map(r=>r.local))];
+  const rows = locals.map(local=>{
+    const own = recs.filter(r=>r.local===local);
+    const finde = sum(own.filter(r=>r.tipoDia==='Fin de Semana'), r=>r.bruto);
+    const semana = sum(own.filter(r=>r.tipoDia==='Semana'), r=>r.bruto);
+    const total = finde+semana;
+    return {local, finde, semana, total};
+  }).sort((a,b)=>b.total-a.total);
+  const grandTotal = sum(rows, r=>r.total);
+  const grandFinde = sum(rows, r=>r.finde);
+
+  document.getElementById('content').innerHTML = `
+    <div class="panel-card">
+      <h3>Ventas: días de semana vs fin de semana</h3>
+      <div class="table-scroll">
+      <table class="report-table">
+        <thead><tr><th>Local</th><th>Vtas Fin de Semana</th><th>Vtas Semana</th><th>Total</th><th>% Fin de Semana</th><th>% Semana</th></tr></thead>
+        <tbody>
+        ${rows.map(r=>`<tr>
+          <td>${r.local}</td>
+          <td class="num">${fmtCLP(r.finde)}</td>
+          <td class="num">${fmtCLP(r.semana)}</td>
+          <td class="num"><strong>${fmtCLP(r.total)}</strong></td>
+          <td class="num">${fmtPct(r.finde/r.total)}</td>
+          <td class="num">${fmtPct(r.semana/r.total)}</td>
+        </tr>`).join('')}
+        <tr class="totals-row">
+          <td>TOTAL GENERAL</td>
+          <td class="num">${fmtCLP(grandFinde)}</td>
+          <td class="num">${fmtCLP(grandTotal-grandFinde)}</td>
+          <td class="num">${fmtCLP(grandTotal)}</td>
+          <td class="num">${fmtPct(grandFinde/grandTotal)}</td>
+          <td class="num">${fmtPct((grandTotal-grandFinde)/grandTotal)}</td>
+        </tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+  `;
+}
+
+/* =========================================================
+   TAB: TICKET PROMEDIO
+   ========================================================= */
+function renderTicket(){
+  const recs = getSelectedRecords();
+  const months = getSelectedMonths();
+  const locals = [...new Set(recs.map(r=>r.local))];
+
+  function ticketFor(local, mk){
+    const rows = recs.filter(r=>r.local===local && r.monthKey===mk && !r.devolucion);
+    const comprobantes = new Set(rows.map(r=>r.comprobante));
+    const total = sum(rows, r=>r.bruto);
+    return comprobantes.size ? total/comprobantes.size : 0;
+  }
+  const tableRows = locals.map(local=>{
+    const perMonth = months.map(mk=>ticketFor(local,mk));
+    const allRows = recs.filter(r=>r.local===local && !r.devolucion);
+    const cantComprobantes = new Set(allRows.map(r=>r.comprobante)).size;
+    const first = perMonth[0], last = perMonth[perMonth.length-1];
+    const varPct = (first) ? (last-first)/first : null;
+    return {local, cantComprobantes, perMonth, varPct};
+  }).sort((a,b)=>b.cantComprobantes-a.cantComprobantes);
+
+  document.getElementById('content').innerHTML = `
+    <div class="panel-card">
+      <h3>Ticket promedio por local y mes</h3>
+      <div class="table-scroll">
+      <table class="report-table">
+        <thead><tr>
+          <th>Local</th><th>Cant. comprobantes</th>
+          ${months.map(mk=>`<th>${recs.find(r=>r.monthKey===mk).monthLabel}</th>`).join('')}
+          <th>Var% (primer→último mes)</th>
+        </tr></thead>
+        <tbody>
+        ${tableRows.map(r=>`<tr>
+          <td>${r.local}</td>
+          <td class="num">${r.cantComprobantes.toLocaleString('es-CL')}</td>
+          ${r.perMonth.map(v=>`<td class="num">${fmtCLP(v)}</td>`).join('')}
+          <td class="num">${r.varPct===null?'s/d':fmtPct(r.varPct)}</td>
+        </tr>`).join('')}
+        </tbody>
+      </table>
+      </div>
+    </div>
+  `;
+}
+
+/* =========================================================
+   TAB: VENTAS POR DÍA
+   ========================================================= */
+function renderDia(){
+  const recs = getSelectedRecords();
+  const total = sum(recs, r=>r.bruto);
+  const rows = WEEKDAYS.map(day=>{
+    const own = recs.filter(r=>r.weekday===day);
+    const ventas = sum(own, r=>r.bruto);
+    const noDevol = own.filter(r=>!r.devolucion);
+    const comprobantes = new Set(noDevol.map(r=>r.comprobante)).size;
+    const ticket = comprobantes ? sum(noDevol,r=>r.bruto)/comprobantes : 0;
+    return {day, ventas, ticket};
+  });
+
+  document.getElementById('content').innerHTML = `
+    <div class="panel-card">
+      <h3>Ventas totales por día de la semana</h3>
+      <div class="table-scroll">
+      <table class="report-table">
+        <thead><tr><th>Día</th><th>Ventas totales</th><th>% sobre total</th><th>Ticket prom.</th></tr></thead>
+        <tbody>
+        ${rows.map(r=>`<tr><td>${r.day}</td><td class="num">${fmtCLP(r.ventas)}</td><td class="num">${fmtPct(r.ventas/total)}</td><td class="num">${fmtCLP(r.ticket)}</td></tr>`).join('')}
+        <tr class="totals-row"><td>TOTAL</td><td class="num">${fmtCLP(total)}</td><td class="num">100.0%</td><td></td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+    <div class="panel-card">
+      <h3>Distribución semanal</h3>
+      <div class="chart-wrap"><canvas id="chartDia"></canvas></div>
+    </div>
+  `;
+
+  if(charts.dia) charts.dia.destroy();
+  charts.dia = new Chart(document.getElementById('chartDia'), {
+    type:'bar',
+    data:{labels: rows.map(r=>r.day), datasets:[{label:'Ventas', data: rows.map(r=>r.ventas), backgroundColor:'#2a78d6'}]},
+    options:{plugins:{legend:{display:false}}, scales:{y:{ticks:{callback:v=>'$'+(v/1e6).toFixed(0)+'M'}}}}
+  });
+}
+
+/* =========================================================
+   TAB: DEVOLUCIONES
+   ========================================================= */
+function renderDevoluciones(){
+  const recs = getSelectedRecords();
+  const locals = [...new Set(recs.map(r=>r.local))];
+  const rows = locals.map(local=>{
+    const own = recs.filter(r=>r.local===local);
+    const ventasPositivas = sum(own.filter(r=>!r.devolucion), r=>r.bruto);
+    const devolRows = own.filter(r=>r.devolucion);
+    const devoluciones = sum(devolRows, r=>r.bruto);
+    const cantidad = new Set(devolRows.map(r=>r.comprobante)).size;
+    return {local, ventasPositivas, devoluciones, cantidad, pct: ventasPositivas ? Math.abs(devoluciones)/ventasPositivas : 0};
+  }).sort((a,b)=>b.ventasPositivas-a.ventasPositivas);
+  const totalVentas = sum(rows, r=>r.ventasPositivas);
+  const totalDevol = sum(rows, r=>r.devoluciones);
+  const totalCant = sum(rows, r=>r.cantidad);
+
+  document.getElementById('content').innerHTML = `
+    <div class="panel-card">
+      <h3>Notas de crédito / anulaciones por local</h3>
+      <div class="table-scroll">
+      <table class="report-table">
+        <thead><tr><th>Local</th><th>Ventas Brutas Positivas</th><th>Devoluciones</th><th>% s/Ventas</th><th>Cant. NC</th></tr></thead>
+        <tbody>
+        ${rows.map(r=>`<tr>
+          <td>${r.local}</td>
+          <td class="num">${fmtCLP(r.ventasPositivas)}</td>
+          <td class="num neg">${fmtCLP(r.devoluciones)}</td>
+          <td class="num">${fmtPct(r.pct)}</td>
+          <td class="num">${r.cantidad}</td>
+        </tr>`).join('')}
+        <tr class="totals-row">
+          <td>TOTAL GENERAL</td><td class="num">${fmtCLP(totalVentas)}</td><td class="num neg">${fmtCLP(totalDevol)}</td>
+          <td class="num">${fmtPct(Math.abs(totalDevol)/totalVentas)}</td><td class="num">${totalCant}</td>
+        </tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="note-box">Se considera devolución toda línea marcada como "devolucion" en el campo Tipo Movimiento, o con Venta Total Bruta negativa.</div>
+    </div>
+  `;
+}
+
+/* =========================================================
+   TAB: RANKING MENSUAL
+   ========================================================= */
+function renderRanking(){
+  const recs = getSelectedRecords();
+  const months = getSelectedMonths();
+  const byLocalMonth = totalsByLocalMonth(recs);
+  const locals = Object.keys(byLocalMonth);
+
+  const ranksByMonth = {};
+  months.forEach(mk=>{
+    const sorted = locals.map(l => ({l, v: byLocalMonth[l][mk]||0})).sort((a,b)=>b.v-a.v);
+    sorted.forEach((r,i)=>{ ranksByMonth[mk] = ranksByMonth[mk] || {}; ranksByMonth[mk][r.l] = i+1; });
+  });
+  const rows = locals.map(local=>{
+    const ranks = months.map(mk => ranksByMonth[mk][local] || null);
+    const first = ranks[0], last = ranks[ranks.length-1];
+    const cambio = (first && last) ? first-last : null;
+    return {local, ranks, cambio};
+  }).sort((a,b)=>(a.ranks[a.ranks.length-1]||99)-(b.ranks[b.ranks.length-1]||99));
+
+  document.getElementById('content').innerHTML = `
+    <div class="panel-card">
+      <h3>Evolución del ranking de locales mes a mes</h3>
+      <div class="table-scroll">
+      <table class="report-table">
+        <thead><tr>
+          <th>Local</th>
+          ${months.map(mk=>`<th>${recs.find(r=>r.monthKey===mk).monthLabel}</th>`).join('')}
+          <th>Cambio</th>
+        </tr></thead>
+        <tbody>
+        ${rows.map(r=>`<tr>
+          <td>${r.local}</td>
+          ${r.ranks.map(v=>`<td class="num">${v||'—'}</td>`).join('')}
+          <td class="num">${r.cambio===null?'s/d':(r.cambio>0?'+':'')+r.cambio}</td>
+        </tr>`).join('')}
+        </tbody>
+      </table>
+      </div>
+      <div class="note-box">"Cambio" positivo = subió puestos desde el primer al último mes seleccionado; negativo = bajó puestos.</div>
+    </div>
+  `;
+}
+
+/* =========================================================
+   TAB: ACUMULADO
+   ========================================================= */
+function renderAcumulado(){
+  const recs = getSelectedRecords();
+  const months = getSelectedMonths();
+  const byLocalMonth = totalsByLocalMonth(recs);
+  const locals = Object.keys(byLocalMonth).sort((a,b)=>{
+    const ta = sum(Object.values(byLocalMonth[a]),x=>x), tb = sum(Object.values(byLocalMonth[b]),x=>x);
+    return tb - ta;
+  });
+
+  let running = 0;
+  const totalAcum = months.map(mk=>{
+    const monthTotal = sum(recs.filter(r=>r.monthKey===mk), r=>r.bruto);
+    running += monthTotal;
+    return {mk, label: recs.find(r=>r.monthKey===mk).monthLabel, monthTotal, running};
+  });
+
+  const runningByLocal = {}; locals.forEach(l=> runningByLocal[l]=0 );
+  const localRows = months.map(mk=>{
+    const vals = {};
+    locals.forEach(l=>{ runningByLocal[l] += (byLocalMonth[l][mk]||0); vals[l] = runningByLocal[l]; });
+    return {mk, label: recs.find(r=>r.monthKey===mk).monthLabel, vals};
+  });
+
+  document.getElementById('content').innerHTML = `
+    <div class="kpi-row">
+      <div class="stat-tile">
+        <div class="label">Acumulado del período (YTD)</div>
+        <div class="value">${fmtCLP(totalAcum.length ? totalAcum[totalAcum.length-1].running : 0)}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="label">Promedio mensual</div>
+        <div class="value">${fmtCLP(totalAcum.length ? totalAcum[totalAcum.length-1].running/totalAcum.length : 0)}</div>
+      </div>
+    </div>
+    <div class="panel-card">
+      <h3>Ventas acumuladas mes a mes</h3>
+      <div class="chart-wrap"><canvas id="chartAcum"></canvas></div>
+    </div>
+    <div class="panel-card">
+      <h3>Detalle acumulado</h3>
+      <div class="table-scroll">
+      <table class="report-table">
+        <thead><tr><th>Mes</th><th>Venta del mes</th><th>Acumulado (YTD)</th></tr></thead>
+        <tbody>${totalAcum.map(r=>`<tr><td>${r.label}</td><td class="num">${fmtCLP(r.monthTotal)}</td><td class="num"><strong>${fmtCLP(r.running)}</strong></td></tr>`).join('')}</tbody>
+      </table>
+      </div>
+    </div>
+    <div class="panel-card">
+      <h3>Acumulado por local</h3>
+      <div class="table-scroll">
+      <table class="report-table">
+        <thead><tr><th>Mes</th>${locals.map(l=>`<th>${l}</th>`).join('')}</tr></thead>
+        <tbody>${localRows.map(r=>`<tr><td>${r.label}</td>${locals.map(l=>`<td class="num">${fmtCLP(r.vals[l])}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table>
+      </div>
+    </div>
+  `;
+
+  if(charts.acum) charts.acum.destroy();
+  charts.acum = new Chart(document.getElementById('chartAcum'), {
+    type:'line',
+    data:{ labels: totalAcum.map(r=>r.label), datasets:[{ label:'Acumulado', data: totalAcum.map(r=>r.running),
+      borderColor:'#0ca30c', backgroundColor:'rgba(12,163,12,.12)', fill:true, tension:.2, pointRadius:4 }] },
+    options:{ plugins:{legend:{display:false}}, scales:{y:{ticks:{callback:v=>'$'+(v/1e6).toFixed(0)+'M'}}} }
+  });
+}
+
+/* =========================================================
+   EXPORTAR A EXCEL
+   ========================================================= */
+const TAB_TITLES = {
+  resumen:'Resumen', local:'Ventas por Local', finde:'Semana vs Finde', ticket:'Ticket Promedio',
+  dia:'Ventas por Dia', devoluciones:'Devoluciones', ranking:'Ranking', acumulado:'Acumulado'
+};
+
+function tableToAOA(tableEl){
+  const aoa = [];
+  tableEl.querySelectorAll('tr').forEach(tr=>{
+    const row = [];
+    tr.querySelectorAll('th,td').forEach(cell=>{
+      const txt = cell.textContent.trim();
+      if(/^-?\d+(\.\d+)?%$/.test(txt)){
+        row.push(parseFloat(txt.replace('%',''))/100);
+      } else if(/^-?\$?\d[\d.,]*$/.test(txt) && txt.length>0){
+        const n = parseFloat(txt.replace(/[$.]/g,'').replace(',','.'));
+        row.push(isNaN(n)? txt : n);
+      } else { row.push(txt); }
+    });
+    aoa.push(row);
+  });
+  return aoa;
+}
+
+function exportToExcel(){
+  const wb = XLSX.utils.book_new();
+  const tabsToExport = ['resumen','local','finde','ticket','dia','devoluciones','ranking','acumulado'];
+  const currentTab = activeTab;
+
+  tabsToExport.forEach(tab=>{
+    activeTab = tab;
+    renderActiveTab();
+    const tables = document.querySelectorAll('#content table');
+    tables.forEach((tableEl, idx)=>{
+      const aoa = tableToAOA(tableEl);
+      const sheetName = (TAB_TITLES[tab] + (tables.length>1 ? ' '+(idx+1) : '')).substring(0,31);
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    });
+  });
+
+  const recs = getSelectedRecords();
+  const datosAOA = [['Fecha','Mes','Día','TipoDia','Local','Total Bruto','EsDevolucion']];
+  recs.forEach(r=> datosAOA.push([r.fecha.toLocaleDateString('es-CL'), r.monthLabel, r.weekday, r.tipoDia, r.local, r.bruto, r.devolucion ? 'TRUE':'FALSE']));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(datosAOA), 'Datos');
+
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===currentTab));
+  activeTab = currentTab;
+  renderActiveTab();
+
+  const from = document.getElementById('fromMonth').value;
+  const to = document.getElementById('toMonth').value;
+  XLSX.writeFile(wb, `Informe_Ventas_Locales_${from}_a_${to}.xlsx`);
+}
+document.getElementById('exportBtn').addEventListener('click', exportToExcel);
+
+/* =========================================================
+   INICIO
+   ========================================================= */
+loadData();
+</script>
+</body>
+</html>
