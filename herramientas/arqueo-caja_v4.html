@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Arqueo de Caja Diario</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💰</text></svg>" />
+<style>
+  :root{
+    --bg:#0f1117;
+    --card:#171a23;
+    --card-hover:#1f2330;
+    --border:#262b3a;
+    --text:#eef0f5;
+    --muted:#9aa1b4;
+    --blue:#7c9cff;
+    --orange:#ff9f6b;
+    --green:#5fd68a;
+    --red:#ff6b7c;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(124,156,255,.12), transparent 60%),
+      radial-gradient(1000px 600px at 100% 0%, rgba(255,159,107,.10), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding:32px 16px 64px;
+  }
+  .wrap{max-width:720px;margin:0 auto;}
+  header{margin-bottom:28px;}
+  header h1{font-size:26px;margin:0 0 6px;display:flex;align-items:center;gap:10px;}
+  header p{margin:0;color:var(--muted);font-size:14.5px;}
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:22px 22px 26px;
+    margin-bottom:18px;
+  }
+  .card h2{
+    font-size:14px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--orange);
+    margin:0 0 16px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .row{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:14px;
+  }
+  .row.local-fecha{grid-template-columns:1.4fr 1.4fr 1fr;}
+  .row.pos-row{grid-template-columns:1fr 1fr;}
+  .denoms{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+  }
+  @media (max-width:640px){
+    .row.local-fecha{grid-template-columns:1fr 1fr;}
+  }
+  @media (max-width:520px){
+    .row, .denoms{grid-template-columns:1fr 1fr;}
+  }
+  .field{display:flex;flex-direction:column;gap:6px;}
+  .field label{font-size:12.5px;color:var(--muted);}
+  .field .hint{font-size:11.5px;color:var(--muted);opacity:.8;}
+  input, select{
+    background:#0d0f15;
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:10px;
+    padding:10px 12px;
+    font-size:15px;
+    font-family:inherit;
+    outline:none;
+    transition:border-color .15s;
+    width:100%;
+  }
+  input:focus, select:focus{border-color:var(--blue);}
+  input::placeholder{color:#5b6175;}
+  input:disabled{opacity:.6;cursor:not-allowed;}
+  .money-wrap{position:relative;}
+  .money-wrap .prefix{
+    position:absolute;
+    left:12px;
+    top:50%;
+    transform:translateY(-50%);
+    color:var(--muted);
+    font-size:15px;
+    pointer-events:none;
+  }
+  .money-wrap input{padding-left:24px;}
+  .total-line{
+    margin-top:16px;
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    border-top:1px dashed var(--border);
+    padding-top:14px;
+  }
+  .total-line span:first-child{color:var(--muted);font-size:13px;}
+  .total-line span:last-child{font-size:22px;font-weight:600;color:var(--blue);}
+  .pos-help{
+    margin-top:16px;
+    padding-top:14px;
+    border-top:1px dashed var(--border);
+    font-size:12.5px;
+    color:var(--muted);
+    line-height:1.5;
+  }
+  .diferencia-box{
+    border-radius:14px;
+    padding:16px 18px;
+    margin-bottom:18px;
+    border:1px solid var(--border);
+    background:var(--card);
+    transition:background .15s, border-color .15s;
+  }
+  .diferencia-box .dif-titulo{
+    font-size:12.5px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+  .diferencia-box .dif-linea{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:13.5px;color:var(--muted);
+    padding:3px 0;
+  }
+  .diferencia-box .dif-linea b{color:var(--text);font-weight:600;}
+  .diferencia-box .dif-total{
+    display:flex;justify-content:space-between;align-items:baseline;
+    margin-top:8px;padding-top:10px;border-top:1px dashed var(--border);
+    font-size:15px;
+  }
+  .diferencia-box .dif-total span:last-child{font-size:20px;font-weight:700;}
+  .diferencia-box.ok{border-color:rgba(95,214,138,.35);}
+  .diferencia-box.ok .dif-total span:last-child{color:var(--green);}
+  .diferencia-box.bad{border-color:rgba(255,107,124,.45);background:rgba(255,107,124,.06);}
+  .diferencia-box.bad .dif-total span:last-child{color:var(--red);}
+  .dif-alerta{
+    display:none;
+    margin-top:10px;
+    font-size:13px;
+    color:var(--red);
+    background:rgba(255,107,124,.12);
+    border:1px solid rgba(255,107,124,.35);
+    border-radius:10px;
+    padding:8px 12px;
+  }
+  .diferencia-box.bad .dif-alerta{display:block;}
+  button[type="submit"]{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:12px;
+    background:linear-gradient(135deg, var(--blue), #5c7fe0);
+    color:#0b0d13;
+    font-weight:700;
+    font-size:15.5px;
+    cursor:pointer;
+    transition:transform .12s, opacity .12s;
+  }
+  button[type="submit"]:hover{transform:translateY(-1px);}
+  button[type="submit"]:disabled{opacity:.55;cursor:default;transform:none;}
+  .msg{
+    margin-top:14px;
+    border-radius:12px;
+    padding:14px 16px;
+    font-size:14px;
+    display:none;
+  }
+  .msg.ok{display:block;background:rgba(95,214,138,.12);border:1px solid rgba(95,214,138,.35);color:var(--green);}
+  .msg.err{display:block;background:rgba(255,107,124,.12);border:1px solid rgba(255,107,124,.35);color:var(--red);}
+  footer{text-align:center;color:var(--muted);font-size:12.5px;margin-top:20px;}
+  footer a{color:var(--blue);text-decoration:none;}
+
+  /* --- Modal de confirmación --- */
+  .modal-overlay{
+    display:none;
+    position:fixed;inset:0;
+    background:rgba(5,6,10,.72);
+    align-items:center;justify-content:center;
+    padding:16px;
+    z-index:50;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-box{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:16px;
+    max-width:420px;width:100%;
+    padding:24px;
+  }
+  .modal-box h3{margin:0 0 12px;font-size:17px;display:flex;align-items:center;gap:8px;}
+  .modal-box .modal-resumen{
+    font-size:13.5px;color:var(--muted);
+    background:#0d0f15;border:1px solid var(--border);border-radius:10px;
+    padding:12px 14px;margin-bottom:14px;
+  }
+  .modal-box .modal-resumen div{display:flex;justify-content:space-between;padding:2px 0;}
+  .modal-box .modal-resumen div b{color:var(--text);font-weight:600;}
+  .modal-box .modal-warn{
+    font-size:13px;color:var(--red);
+    background:rgba(255,107,124,.12);border:1px solid rgba(255,107,124,.35);
+    border-radius:10px;padding:10px 12px;margin-bottom:14px;
+  }
+  .modal-actions{display:flex;gap:10px;}
+  .modal-actions button{
+    flex:1;padding:12px;border-radius:10px;border:none;font-weight:700;font-size:14.5px;cursor:pointer;
+  }
+  .modal-actions .btn-cancelar{background:#0d0f15;border:1px solid var(--border);color:var(--text);}
+  .modal-actions .btn-aceptar{background:linear-gradient(135deg, var(--blue), #5c7fe0);color:#0b0d13;}
+
+  /* --- Ticket de impresión (80mm) --- */
+  #ticket-print{display:none;}
+  @media print{
+    html, body{
+      background:#fff !important;
+      background-image:none !important;
+      color:#000 !important;
+      height:auto !important;
+      min-height:0 !important;
+      padding:0 !important;
+      margin:0 !important;
+    }
+    body *{visibility:hidden;}
+    #ticket-print, #ticket-print *{visibility:visible;}
+    #ticket-print{
+      display:block !important;
+      position:absolute;top:0;left:0;
+      width:80mm;
+      padding:4mm;
+      background:#fff;
+      font-family:'Courier New', monospace;
+      font-size:11px;
+      color:#000;
+    }
+    @page{size:80mm auto;margin:0;}
+    #ticket-print h4{font-size:13px;margin:0 0 4px;text-align:center;}
+    #ticket-print .tk-sub{text-align:center;font-size:10px;margin-bottom:8px;}
+    #ticket-print .tk-line{display:flex;justify-content:space-between;padding:1px 0;}
+    #ticket-print hr{border:none;border-top:1px dashed #000;margin:6px 0;}
+    #ticket-print .tk-total{font-weight:bold;font-size:12px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>💰 Arqueo de Caja Diario</h1>
+    <p>Carga el cierre de caja de tu local. Este formulario solo permite cargar información — no muestra datos de otros días ni de otros locales.</p>
+  </header>
+
+  <form id="form-arqueo">
+
+    <div class="card">
+      <h2>📍 Local, vendedor y fecha</h2>
+      <div class="row local-fecha">
+        <div class="field">
+          <label for="local">Local</label>
+          <select id="local" required>
+            <option value="" disabled selected>Selecciona tu local...</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="vendedor">Nombre del vendedor</label>
+          <input type="text" id="vendedor" placeholder="Ej: Juan Pérez" required />
+        </div>
+        <div class="field">
+          <label for="fecha">Fecha arqueo</label>
+          <input type="date" id="fecha" disabled />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>💵 Movimientos de caja</h2>
+      <div class="row">
+        <div class="field">
+          <label for="saldoApertura">Saldo apertura</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="saldoApertura" placeholder="0" required /></div>
+        </div>
+        <div class="field">
+          <label for="ventaEfectivo">Venta efectivo</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="ventaEfectivo" placeholder="0" required /></div>
+        </div>
+        <div class="field">
+          <label for="devolNC">Devolución de dinero</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="devolNC" placeholder="0" /></div>
+        </div>
+        <div class="field">
+          <label for="retiro">Retiro de dinero</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="retiro" placeholder="0" /></div>
+        </div>
+        <div class="field">
+          <label for="vuelto">Vuelto</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="vuelto" placeholder="0" /></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>💳 Ventas con medios de pago</h2>
+      <div class="row">
+        <div class="field">
+          <label for="debito">Vta débito</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="debito" placeholder="0" /></div>
+        </div>
+        <div class="field">
+          <label for="credito">Vta crédito</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="credito" placeholder="0" /></div>
+        </div>
+        <div class="field">
+          <label for="vtaMercadoPago">Vta Mercado Pago</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="vtaMercadoPago" placeholder="0" /></div>
+        </div>
+        <div class="field">
+          <label for="vtaAsistida">Vta asistida</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="vtaAsistida" placeholder="0" /></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🪙 Conteo de efectivo (arqueo físico)</h2>
+      <div class="denoms" id="denoms"></div>
+      <div class="total-line">
+        <span>Total contado</span>
+        <span id="total-contado">$0</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🧾 Cierre POS</h2>
+      <div class="row pos-row">
+        <div class="field">
+          <label for="montoTBK">Transbank</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="montoTBK" placeholder="0" /></div>
+        </div>
+        <div class="field">
+          <label for="montoMP">Mercado Pago</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="montoMP" placeholder="0" /></div>
+        </div>
+      </div>
+      <div class="pos-help">Esta información está en el boucher de cierre de cada máquina. Es el monto total cobrado con la POS.</div>
+    </div>
+
+    <div class="diferencia-box ok" id="diferencia-box">
+      <div class="dif-titulo">⚖️ Cuadratura de caja (en vivo)</div>
+      <div class="dif-linea"><span>Saldo teórico (apertura + ventas - devoluciones - retiros - vuelto)</span><b id="dif-teorico">$0</b></div>
+      <div class="dif-linea"><span>Total contado (billetes y monedas)</span><b id="dif-contado">$0</b></div>
+      <div class="dif-total"><span>Diferencia caja</span><span id="dif-valor">$0</span></div>
+      <div class="dif-linea" style="margin-top:10px;"><span>Transbank declarado</span><b id="dif-tbk-declarado">$0</b></div>
+      <div class="dif-linea"><span>Débito + Crédito registrados</span><b id="dif-tbk-vta">$0</b></div>
+      <div class="dif-total"><span>Diferencia Transbank</span><span id="dif-tbk-valor">$0</span></div>
+      <div class="dif-linea" style="margin-top:10px;"><span>Mercado Pago declarado (POS)</span><b id="dif-mp-declarado">$0</b></div>
+      <div class="dif-linea"><span>Vta Mercado Pago registrada</span><b id="dif-mp-vta">$0</b></div>
+      <div class="dif-total"><span>Diferencia Mercado Pago</span><span id="dif-mp-valor">$0</span></div>
+      <div class="dif-alerta" id="dif-alerta">⚠️ Hay un descuadre. Revisa el conteo de efectivo o los montos ingresados antes de cargar. Igual puedes cargarlo si el descuadre es real.</div>
+    </div>
+
+    <button type="submit" id="btn-submit">Cargar arqueo</button>
+    <div class="msg ok" id="msg-ok">✅ Arqueo cargado correctamente. Gracias.</div>
+    <div class="msg err" id="msg-err"></div>
+  </form>
+
+  <footer>
+    <a href="https://cacodro.github.io/Herramientas-PM/">← Volver al panel de herramientas</a>
+  </footer>
+
+</div>
+
+<!-- Modal de confirmación previa al envío -->
+<div class="modal-overlay" id="modal-confirmar">
+  <div class="modal-box">
+    <h3>🧐 ¿Está seguro de lo cargado?</h3>
+    <div class="modal-resumen" id="modal-resumen"></div>
+    <div class="modal-warn" id="modal-warn" style="display:none;"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-cancelar" id="modal-cancelar">Cancelar</button>
+      <button type="button" class="btn-aceptar" id="modal-aceptar">Aceptar y cargar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ticket para impresión térmica 80mm (oculto en pantalla, solo se ve al imprimir) -->
+<div id="ticket-print">
+  <h4>ARQUEO DE CAJA</h4>
+  <div class="tk-sub" id="tk-fecha-hora"></div>
+  <div class="tk-line"><span>Local:</span><span id="tk-local"></span></div>
+  <div class="tk-line"><span>Vendedor:</span><span id="tk-vendedor"></span></div>
+  <div class="tk-line"><span>Fecha:</span><span id="tk-fecha"></span></div>
+  <hr>
+  <div class="tk-line"><span>Saldo apertura</span><span id="tk-saldoApertura"></span></div>
+  <div class="tk-line"><span>Venta efectivo</span><span id="tk-ventaEfectivo"></span></div>
+  <div class="tk-line"><span>Devolución</span><span id="tk-devolNC"></span></div>
+  <div class="tk-line"><span>Retiro</span><span id="tk-retiro"></span></div>
+  <div class="tk-line"><span>Vuelto</span><span id="tk-vuelto"></span></div>
+  <hr>
+  <div class="tk-line"><span>Vta débito</span><span id="tk-debito"></span></div>
+  <div class="tk-line"><span>Vta crédito</span><span id="tk-credito"></span></div>
+  <div class="tk-line"><span>Vta Mercado Pago</span><span id="tk-vtaMercadoPago"></span></div>
+  <div class="tk-line"><span>Vta asistida</span><span id="tk-vtaAsistida"></span></div>
+  <hr>
+  <div id="tk-denoms"></div>
+  <hr>
+  <div class="tk-line tk-total"><span>TOTAL CONTADO</span><span id="tk-totalContado"></span></div>
+  <hr>
+  <div class="tk-line"><span>Transbank</span><span id="tk-montoTBK"></span></div>
+  <div class="tk-line"><span>Mercado Pago (POS)</span><span id="tk-montoMP"></span></div>
+  <hr>
+  <div class="tk-line"><span>Dif. caja</span><span id="tk-difCaja"></span></div>
+  <div class="tk-line"><span>Dif. Transbank</span><span id="tk-difTBK"></span></div>
+  <div class="tk-line"><span>Dif. Mercado Pago</span><span id="tk-difMP"></span></div>
+</div>
+
+<script>
+  // URL de la implementación del Apps Script (Web App).
+  var SCRIPT_URL = "https://script.google.com/macros/s/AKfycby1e3RXNUavuyK6pB203EjmYiceSIi2xVJYaD230UbtJm73IoNQeQM_RfTBZK4KMvYa/exec";
+
+  var LOCALES = [
+    "PM01 Plaza Egaña","PM02 Plaza Tobalaba","PM03 Costanera Center","PM04 Open Kennedy",
+    "PM05 Alto Las Condes","PM06 Marina Arauco","PM07 Portal La Reina","PM08 Castro",
+    "PM09 Mall Sport","PM10 Plaza El Trébol","PM11 Concepción","PM12 Mall MUT",
+    "PM13 Plaza Copiapó","PM14 Plaza La Serena","PM16 Plaza Maule","PM17 Arauco Maipú",
+    "PM18 Plaza Antofagasta","PM19 Plaza Calama","PM20 Plaza Vespucio","PM22 Patio Bellavista",
+    "PM23 Florida Center","PM24 Arauco Chillán","PM25 Portal Ñuñoa","PM26 Portal Rancagua",
+    "PM28 Paseo Puerto Varas","PM29 Plaza Oeste","PM30 Portal Osorno","PM31 Portal Temuco",
+    "PM32 Portal Valdivia","PM33 Plaza Iquique","PM34 Plaza Arica","PM36 Open La Calera",
+    "PM37 Vivo Los Trapenses","PM38 Open Ovalle","PM39 Vivo Coquimbo","PM41 Plaza Sur",
+    "PM43 Plaza Los Ángeles","PM44 Plaza Los Dominicos","PM45 Paseo Puerto Montt"
+  ];
+
+  var DENOMINACIONES = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 10];
+
+  // --- Inicializar select de locales ---
+  var selectLocal = document.getElementById('local');
+  LOCALES.forEach(function (nombre) {
+    var opt = document.createElement('option');
+    opt.value = nombre;
+    opt.textContent = nombre;
+    selectLocal.appendChild(opt);
+  });
+
+  // --- Fecha por defecto: hoy, bloqueada ---
+  var inputFecha = document.getElementById('fecha');
+  var hoy = new Date();
+  var iso = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
+  inputFecha.value = iso;
+
+  // --- Generar inputs de conteo de denominaciones ---
+  var denomsContainer = document.getElementById('denoms');
+  DENOMINACIONES.forEach(function (valor) {
+    var field = document.createElement('div');
+    field.className = 'field';
+    var etiqueta = valor >= 1000 ? ('$' + (valor / 1000) + '.000') : ('$' + valor);
+    field.innerHTML =
+      '<label for="d' + valor + '">' + etiqueta + '</label>' +
+      '<input type="number" step="1" min="0" id="d' + valor + '" placeholder="0" data-denom="' + valor + '" />';
+    denomsContainer.appendChild(field);
+  });
+
+  function val(id) {
+    var el = document.getElementById(id);
+    if (el.value === '') return 0;
+    var soloDigitos = String(el.value).replace(/[^\d]/g, '');
+    return soloDigitos === '' ? 0 : parseFloat(soloDigitos);
+  }
+
+  var totalContadoEl = document.getElementById('total-contado');
+  function calcularArqueo() {
+    var total = 0;
+    DENOMINACIONES.forEach(function (valor) {
+      var cant = parseFloat(document.getElementById('d' + valor).value) || 0;
+      total += cant * valor;
+    });
+    return total;
+  }
+  function recalcularTotal() {
+    totalContadoEl.textContent = '$' + calcularArqueo().toLocaleString('es-CL');
+  }
+
+  // --- Cuadratura en vivo (caja y TBK) ---
+  var difBox = document.getElementById('diferencia-box');
+  function fmt(n) { return '$' + n.toLocaleString('es-CL'); }
+
+  function recalcularDiferencia() {
+    var saldoTeorico = val('saldoApertura') + val('ventaEfectivo') - val('devolNC') - val('retiro') - val('vuelto');
+    var totalContado = calcularArqueo();
+    var difCaja = totalContado - saldoTeorico;
+
+    var montoTBK = val('montoTBK');
+    var vtaTarjetas = val('debito') + val('credito');
+    var difTBK = montoTBK - vtaTarjetas;
+
+    var montoMP = val('montoMP');
+    var vtaMP = val('vtaMercadoPago');
+    var difMP = montoMP - vtaMP;
+
+    document.getElementById('dif-teorico').textContent = fmt(saldoTeorico);
+    document.getElementById('dif-contado').textContent = fmt(totalContado);
+    document.getElementById('dif-valor').textContent = fmt(difCaja);
+    document.getElementById('dif-tbk-declarado').textContent = fmt(montoTBK);
+    document.getElementById('dif-tbk-vta').textContent = fmt(vtaTarjetas);
+    document.getElementById('dif-tbk-valor').textContent = fmt(difTBK);
+    document.getElementById('dif-mp-declarado').textContent = fmt(montoMP);
+    document.getElementById('dif-mp-vta').textContent = fmt(vtaMP);
+    document.getElementById('dif-mp-valor').textContent = fmt(difMP);
+
+    var hayDescuadre = difCaja !== 0 || difTBK !== 0 || difMP !== 0;
+    difBox.className = 'diferencia-box ' + (hayDescuadre ? 'bad' : 'ok');
+
+    return { saldoTeorico: saldoTeorico, totalContado: totalContado, difCaja: difCaja, difTBK: difTBK, difMP: difMP, hayDescuadre: hayDescuadre };
+  }
+
+  denomsContainer.addEventListener('input', function () {
+    recalcularTotal();
+    recalcularDiferencia();
+  });
+
+  // --- Formateo de campos de dinero: $ + separador de miles mientras se escribe ---
+  var camposDinero = document.querySelectorAll('input.money');
+  camposDinero.forEach(function (input) {
+    input.addEventListener('input', function () {
+      var soloDigitos = input.value.replace(/[^\d]/g, '');
+      input.value = soloDigitos === '' ? '' : Number(soloDigitos).toLocaleString('es-CL');
+      recalcularDiferencia();
+    });
+  });
+
+  recalcularDiferencia();
+
+  // --- Elementos generales ---
+  var form = document.getElementById('form-arqueo');
+  var btn = document.getElementById('btn-submit');
+  var msgOk = document.getElementById('msg-ok');
+  var msgErr = document.getElementById('msg-err');
+
+  // --- Modal de confirmación ---
+  var modal = document.getElementById('modal-confirmar');
+  var modalResumen = document.getElementById('modal-resumen');
+  var modalWarn = document.getElementById('modal-warn');
+  var modalCancelar = document.getElementById('modal-cancelar');
+  var modalAceptar = document.getElementById('modal-aceptar');
+
+  function abrirModalConfirmacion(dif) {
+    modalResumen.innerHTML =
+      '<div><span>Local</span><b>' + (selectLocal.value || '-') + '</b></div>' +
+      '<div><span>Vendedor</span><b>' + (document.getElementById('vendedor').value || '-') + '</b></div>' +
+      '<div><span>Fecha</span><b>' + inputFecha.value + '</b></div>' +
+      '<div><span>Total contado</span><b>' + fmt(dif.totalContado) + '</b></div>';
+
+    if (dif.hayDescuadre) {
+      var texto = '⚠️ Hay un descuadre: ';
+      var partes = [];
+      if (dif.difCaja !== 0) partes.push('Caja ' + fmt(dif.difCaja));
+      if (dif.difTBK !== 0) partes.push('Transbank ' + fmt(dif.difTBK));
+      if (dif.difMP !== 0) partes.push('Mercado Pago ' + fmt(dif.difMP));
+      modalWarn.textContent = texto + partes.join(' · ');
+      modalWarn.style.display = 'block';
+    } else {
+      modalWarn.style.display = 'none';
+    }
+
+    modal.classList.add('open');
+  }
+  function cerrarModal() {
+    modal.classList.remove('open');
+  }
+  modalCancelar.addEventListener('click', cerrarModal);
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) cerrarModal();
+  });
+
+  // --- Imprimir comprobante (ticket 80mm) ---
+  function imprimirTicket(payload, dif) {
+    document.getElementById('tk-fecha-hora').textContent = new Date().toLocaleString('es-CL');
+    document.getElementById('tk-local').textContent = payload.local;
+    document.getElementById('tk-vendedor').textContent = payload.vendedor;
+    document.getElementById('tk-fecha').textContent = payload.fecha;
+    document.getElementById('tk-saldoApertura').textContent = fmt(payload.saldoApertura);
+    document.getElementById('tk-ventaEfectivo').textContent = fmt(payload.ventaEfectivo);
+    document.getElementById('tk-devolNC').textContent = fmt(payload.devolNC);
+    document.getElementById('tk-retiro').textContent = fmt(payload.retiro);
+    document.getElementById('tk-vuelto').textContent = fmt(payload.vuelto);
+    document.getElementById('tk-debito').textContent = fmt(payload.debito);
+    document.getElementById('tk-credito').textContent = fmt(payload.credito);
+    document.getElementById('tk-vtaMercadoPago').textContent = fmt(payload.vtaMercadoPago);
+    document.getElementById('tk-vtaAsistida').textContent = fmt(payload.vtaAsistida);
+    document.getElementById('tk-montoTBK').textContent = fmt(payload.montoTBK);
+    document.getElementById('tk-montoMP').textContent = fmt(payload.montoMP);
+    document.getElementById('tk-totalContado').textContent = fmt(dif.totalContado);
+    document.getElementById('tk-difCaja').textContent = fmt(dif.difCaja);
+    document.getElementById('tk-difTBK').textContent = fmt(dif.difTBK);
+    document.getElementById('tk-difMP').textContent = fmt(dif.difMP);
+
+    var denomsHtml = '';
+    DENOMINACIONES.forEach(function (valor) {
+      var cant = payload.denominaciones[valor] || 0;
+      if (cant > 0) {
+        denomsHtml += '<div class="tk-line"><span>' + fmt(valor) + ' x' + cant + '</span><span>' + fmt(valor * cant) + '</span></div>';
+      }
+    });
+    document.getElementById('tk-denoms').innerHTML = denomsHtml || '<div class="tk-line"><span>Sin efectivo contado</span></div>';
+
+    window.print();
+  }
+
+  // --- Envío del formulario ---
+  var datosPendientes = null;
+  var difPendiente = null;
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    msgOk.style.display = 'none';
+    msgErr.style.display = 'none';
+
+    if (!SCRIPT_URL || SCRIPT_URL.indexOf('PEGA_AQUI') === 0) {
+      msgErr.textContent = 'Falta configurar la conexión con la planilla (SCRIPT_URL). Avisa al administrador.';
+      msgErr.style.display = 'block';
+      return;
+    }
+
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+
+    var dif = recalcularDiferencia();
+
+    var denominaciones = {};
+    DENOMINACIONES.forEach(function (valor) {
+      denominaciones[valor] = val('d' + valor);
+    });
+
+    datosPendientes = {
+      local: selectLocal.value,
+      vendedor: document.getElementById('vendedor').value.trim(),
+      fecha: inputFecha.value,
+      saldoApertura: val('saldoApertura'),
+      ventaEfectivo: val('ventaEfectivo'),
+      devolNC: val('devolNC'),
+      retiro: val('retiro'),
+      vuelto: val('vuelto'),
+      debito: val('debito'),
+      credito: val('credito'),
+      vtaMercadoPago: val('vtaMercadoPago'),
+      vtaAsistida: val('vtaAsistida'),
+      montoTBK: val('montoTBK'),
+      montoMP: val('montoMP'),
+      denominaciones: denominaciones
+    };
+    difPendiente = dif;
+
+    abrirModalConfirmacion(dif);
+  });
+
+  modalAceptar.addEventListener('click', function () {
+    cerrarModal();
+    if (!datosPendientes) return;
+
+    var payload = datosPendientes;
+    var dif = difPendiente;
+
+    btn.disabled = true;
+    btn.textContent = 'Cargando...';
+
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        btn.disabled = false;
+        btn.textContent = 'Cargar arqueo';
+        if (data.ok) {
+          imprimirTicket(payload, dif);
+          form.reset();
+          inputFecha.value = iso;
+          recalcularTotal();
+          recalcularDiferencia();
+          msgOk.style.display = 'block';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          msgErr.textContent = 'Error: ' + (data.error || 'no se pudo guardar el arqueo.');
+          msgErr.style.display = 'block';
+        }
+        datosPendientes = null;
+        difPendiente = null;
+      })
+      .catch(function (err) {
+        btn.disabled = false;
+        btn.textContent = 'Cargar arqueo';
+        msgErr.textContent = 'No se pudo conectar con la planilla. Revisa tu conexión e intenta de nuevo.';
+        msgErr.style.display = 'block';
+        datosPendientes = null;
+        difPendiente = null;
+      });
+  });
+</script>
+</body>
+</html>
