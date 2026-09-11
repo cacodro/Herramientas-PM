@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Arqueo de Caja Diario</title>
+<style>
+  :root{
+    --bg:#0f1117;
+    --card:#171a23;
+    --card-hover:#1f2330;
+    --border:#262b3a;
+    --text:#eef0f5;
+    --muted:#9aa1b4;
+    --blue:#7c9cff;
+    --orange:#ff9f6b;
+    --green:#5fd68a;
+    --red:#ff6b7c;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(124,156,255,.12), transparent 60%),
+      radial-gradient(1000px 600px at 100% 0%, rgba(255,159,107,.10), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding:32px 16px 64px;
+  }
+  .wrap{max-width:720px;margin:0 auto;}
+  header{margin-bottom:28px;}
+  header h1{font-size:26px;margin:0 0 6px;display:flex;align-items:center;gap:10px;}
+  header p{margin:0;color:var(--muted);font-size:14.5px;}
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:22px 22px 26px;
+    margin-bottom:18px;
+  }
+  .card h2{
+    font-size:14px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--orange);
+    margin:0 0 16px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .row{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:14px;
+  }
+  .row.local-fecha{grid-template-columns:2fr 1fr;}
+  .denoms{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+  }
+  @media (max-width:520px){
+    .row, .row.local-fecha, .denoms{grid-template-columns:1fr 1fr;}
+  }
+  .field{display:flex;flex-direction:column;gap:6px;}
+  .field label{font-size:12.5px;color:var(--muted);}
+  .field .hint{font-size:11.5px;color:var(--muted);opacity:.8;}
+  input, select{
+    background:#0d0f15;
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:10px;
+    padding:10px 12px;
+    font-size:15px;
+    font-family:inherit;
+    outline:none;
+    transition:border-color .15s;
+    width:100%;
+  }
+  input:focus, select:focus{border-color:var(--blue);}
+  input::placeholder{color:#5b6175;}
+  .money-wrap{position:relative;}
+  .money-wrap .prefix{
+    position:absolute;
+    left:12px;
+    top:50%;
+    transform:translateY(-50%);
+    color:var(--muted);
+    font-size:15px;
+    pointer-events:none;
+  }
+  .money-wrap input{padding-left:24px;}
+  .total-line{
+    margin-top:16px;
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    border-top:1px dashed var(--border);
+    padding-top:14px;
+  }
+  .total-line span:first-child{color:var(--muted);font-size:13px;}
+  .total-line span:last-child{font-size:22px;font-weight:600;color:var(--blue);}
+  .diferencia-box{
+    border-radius:14px;
+    padding:16px 18px;
+    margin-bottom:18px;
+    border:1px solid var(--border);
+    background:var(--card);
+    transition:background .15s, border-color .15s;
+  }
+  .diferencia-box .dif-titulo{
+    font-size:12.5px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+  .diferencia-box .dif-linea{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:13.5px;color:var(--muted);
+    padding:3px 0;
+  }
+  .diferencia-box .dif-linea b{color:var(--text);font-weight:600;}
+  .diferencia-box .dif-total{
+    display:flex;justify-content:space-between;align-items:baseline;
+    margin-top:8px;padding-top:10px;border-top:1px dashed var(--border);
+    font-size:15px;
+  }
+  .diferencia-box .dif-total span:last-child{font-size:20px;font-weight:700;}
+  .diferencia-box.ok{border-color:rgba(95,214,138,.35);}
+  .diferencia-box.ok .dif-total span:last-child{color:var(--green);}
+  .diferencia-box.bad{border-color:rgba(255,107,124,.45);background:rgba(255,107,124,.06);}
+  .diferencia-box.bad .dif-total span:last-child{color:var(--red);}
+  .dif-alerta{
+    display:none;
+    margin-top:10px;
+    font-size:13px;
+    color:var(--red);
+    background:rgba(255,107,124,.12);
+    border:1px solid rgba(255,107,124,.35);
+    border-radius:10px;
+    padding:8px 12px;
+  }
+  .diferencia-box.bad .dif-alerta{display:block;}
+  button[type="submit"]{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:12px;
+    background:linear-gradient(135deg, var(--blue), #5c7fe0);
+    color:#0b0d13;
+    font-weight:700;
+    font-size:15.5px;
+    cursor:pointer;
+    transition:transform .12s, opacity .12s;
+  }
+  button[type="submit"]:hover{transform:translateY(-1px);}
+  button[type="submit"]:disabled{opacity:.55;cursor:default;transform:none;}
+  .msg{
+    margin-top:14px;
+    border-radius:12px;
+    padding:14px 16px;
+    font-size:14px;
+    display:none;
+  }
+  .msg.ok{display:block;background:rgba(95,214,138,.12);border:1px solid rgba(95,214,138,.35);color:var(--green);}
+  .msg.err{display:block;background:rgba(255,107,124,.12);border:1px solid rgba(255,107,124,.35);color:var(--red);}
+  footer{text-align:center;color:var(--muted);font-size:12.5px;margin-top:20px;}
+  footer a{color:var(--blue);text-decoration:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>💰 Arqueo de Caja Diario</h1>
+    <p>Carga el cierre de caja de tu local. Este formulario solo permite cargar información — no muestra datos de otros días ni de otros locales.</p>
+  </header>
+
+  <form id="form-arqueo">
+
+    <div class="card">
+      <h2>📍 Local y fecha</h2>
+      <div class="row local-fecha">
+        <div class="field">
+          <label for="local">Local</label>
+          <select id="local" required>
+            <option value="" disabled selected>Selecciona tu local...</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fecha">Fecha arqueo</label>
+          <input type="date" id="fecha" required />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>💵 Movimientos de caja</h2>
+      <div class="row">
+        <div class="field">
+          <label for="saldoApertura">Saldo apertura</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="saldoApertura" placeholder="0" required /></div>
+        </div>
+        <div class="field">
+          <label for="ventaEfectivo">Venta efectivo</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="ventaEfectivo" placeholder="0" required /></div>
+        </div>
+        <div class="field">
+          <label for="devolNC">Devolución de dinero</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="devolNC" placeholder="0" /></div>
+        </div>
+        <div class="field">
+          <label for="retiro">Retiro de dinero</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="retiro" placeholder="0" /></div>
+        </div>
+        <div class="field">
+          <label for="vuelto">Vuelto</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="vuelto" placeholder="0" /></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>💳 Ventas con medios de pago</h2>
+      <div class="row">
+        <div class="field">
+          <label for="debito">Vta débito</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="debito" placeholder="0" /></div>
+        </div>
+        <div class="field">
+          <label for="credito">Vta crédito</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="credito" placeholder="0" /></div>
+        </div>
+        <div class="field">
+          <label for="vtaMercadoPago">Vta Mercado Pago</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="vtaMercadoPago" placeholder="0" /></div>
+        </div>
+        <div class="field">
+          <label for="vtaAsistida">Vta asistida</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="vtaAsistida" placeholder="0" /></div>
+        </div>
+        <div class="field">
+          <label for="montoTBK">Monto TBK <span class="hint">(comprobante de cierre)</span></label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="montoTBK" placeholder="0" /></div>
+        </div>
+        <div class="field">
+          <label for="montoMP">Monto MP</label>
+          <div class="money-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" class="money" id="montoMP" placeholder="0" /></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🪙 Conteo de efectivo (arqueo físico)</h2>
+      <div class="denoms" id="denoms"></div>
+      <div class="total-line">
+        <span>Total contado</span>
+        <span id="total-contado">$0</span>
+      </div>
+    </div>
+
+    <div class="diferencia-box ok" id="diferencia-box">
+      <div class="dif-titulo">⚖️ Cuadratura de caja (en vivo)</div>
+      <div class="dif-linea"><span>Saldo teórico (apertura + ventas - devoluciones - retiros - vuelto)</span><b id="dif-teorico">$0</b></div>
+      <div class="dif-linea"><span>Total contado (billetes y monedas)</span><b id="dif-contado">$0</b></div>
+      <div class="dif-total"><span>Diferencia caja</span><span id="dif-valor">$0</span></div>
+      <div class="dif-linea" style="margin-top:10px;"><span>Monto TBK declarado</span><b id="dif-tbk-declarado">$0</b></div>
+      <div class="dif-linea"><span>Débito + Crédito registrados</span><b id="dif-tbk-vta">$0</b></div>
+      <div class="dif-total"><span>Diferencia TBK</span><span id="dif-tbk-valor">$0</span></div>
+      <div class="dif-alerta" id="dif-alerta">⚠️ Hay un descuadre. Revisa el conteo de efectivo o los montos ingresados antes de cargar. Igual puedes cargarlo si el descuadre es real.</div>
+    </div>
+
+    <button type="submit" id="btn-submit">Cargar arqueo</button>
+    <div class="msg ok" id="msg-ok">✅ Arqueo cargado correctamente. Gracias.</div>
+    <div class="msg err" id="msg-err"></div>
+  </form>
+
+  <footer>
+    <a href="https://cacodro.github.io/Herramientas-PM/">← Volver al panel de herramientas</a>
+  </footer>
+
+</div>
+
+<script>
+  // URL de la implementación del Apps Script (Web App). Pégala aquí después de publicar el script.
+  var SCRIPT_URL = "https://script.google.com/macros/s/AKfycby1e3RXNUavuyK6pB203EjmYiceSIi2xVJYaD230UbtJm73IoNQeQM_RfTBZK4KMvYa/exec";
+
+  var LOCALES = [
+    "ALTO LC","CASTRO","CENTRO CONCE","CHILLAN","COSTANERA","CURICO","FLORIDA",
+    "MAIPU","MARINA","MAULE","MP ANTOFA","MP ARICA","MP CALAMA","MP COPIAPO",
+    "MP EGAÑA","MP EL TREBOL","MP IQUIQUE","MP LA SERENA","MP LOS ANG","MP LOS DOM",
+    "MP OESTE","MP SUR","MP TOBALABA","MP VESPUCIO","MUT","OPEN KENNEDY",
+    "OPEN LA CALERA","OPEN OVALLE","OPEN RGUA","PASEO VIÑA","PATIO","PTAL LA REINA",
+    "PTAL OSORNO","PTAL RGUA","PTAL TEMUCO","PTAL VALDIVIA","PTAL ÑUÑOA","PTO MONTT",
+    "PTO VARAS","PULSAR","SPORT","TURBUS","VIVO CHILLAN","VIVO COQUIMBO",
+    "VIVO SAN FDO","VIVO TRAPENSES"
+  ];
+
+  var DENOMINACIONES = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 10];
+
+  // --- Inicializar select de locales ---
+  var selectLocal = document.getElementById('local');
+  LOCALES.forEach(function (nombre) {
+    var opt = document.createElement('option');
+    opt.value = nombre;
+    opt.textContent = nombre;
+    selectLocal.appendChild(opt);
+  });
+
+  // --- Fecha por defecto: hoy ---
+  var inputFecha = document.getElementById('fecha');
+  var hoy = new Date();
+  var iso = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
+  inputFecha.value = iso;
+
+  // --- Generar inputs de conteo de denominaciones ---
+  var denomsContainer = document.getElementById('denoms');
+  DENOMINACIONES.forEach(function (valor) {
+    var field = document.createElement('div');
+    field.className = 'field';
+    var etiqueta = valor >= 1000 ? ('$' + (valor / 1000) + '.000') : ('$' + valor);
+    field.innerHTML =
+      '<label for="d' + valor + '">' + etiqueta + '</label>' +
+      '<input type="number" step="1" min="0" id="d' + valor + '" placeholder="0" data-denom="' + valor + '" />';
+    denomsContainer.appendChild(field);
+  });
+
+  function val(id) {
+    var el = document.getElementById(id);
+    if (el.value === '') return 0;
+    var soloDigitos = String(el.value).replace(/[^\d]/g, '');
+    return soloDigitos === '' ? 0 : parseFloat(soloDigitos);
+  }
+
+  var totalContadoEl = document.getElementById('total-contado');
+  function calcularArqueo() {
+    var total = 0;
+    DENOMINACIONES.forEach(function (valor) {
+      var cant = parseFloat(document.getElementById('d' + valor).value) || 0;
+      total += cant * valor;
+    });
+    return total;
+  }
+  function recalcularTotal() {
+    totalContadoEl.textContent = '$' + calcularArqueo().toLocaleString('es-CL');
+  }
+
+  // --- Cuadratura en vivo (caja y TBK) ---
+  var difBox = document.getElementById('diferencia-box');
+  var difAlerta = document.getElementById('dif-alerta');
+  function fmt(n) { return '$' + n.toLocaleString('es-CL'); }
+
+  function recalcularDiferencia() {
+    var saldoTeorico = val('saldoApertura') + val('ventaEfectivo') - val('devolNC') - val('retiro') - val('vuelto');
+    var totalContado = calcularArqueo();
+    var difCaja = totalContado - saldoTeorico;
+
+    var montoTBK = val('montoTBK');
+    var vtaTarjetas = val('debito') + val('credito');
+    var difTBK = montoTBK - vtaTarjetas;
+
+    document.getElementById('dif-teorico').textContent = fmt(saldoTeorico);
+    document.getElementById('dif-contado').textContent = fmt(totalContado);
+    document.getElementById('dif-valor').textContent = fmt(difCaja);
+    document.getElementById('dif-tbk-declarado').textContent = fmt(montoTBK);
+    document.getElementById('dif-tbk-vta').textContent = fmt(vtaTarjetas);
+    document.getElementById('dif-tbk-valor').textContent = fmt(difTBK);
+
+    var hayDescuadre = difCaja !== 0 || difTBK !== 0;
+    difBox.className = 'diferencia-box ' + (hayDescuadre ? 'bad' : 'ok');
+
+    return { difCaja: difCaja, difTBK: difTBK, hayDescuadre: hayDescuadre };
+  }
+
+  denomsContainer.addEventListener('input', function () {
+    recalcularTotal();
+    recalcularDiferencia();
+  });
+
+  // --- Formateo de campos de dinero: $ + separador de miles mientras se escribe ---
+  var camposDinero = document.querySelectorAll('input.money');
+  camposDinero.forEach(function (input) {
+    input.addEventListener('input', function () {
+      var soloDigitos = input.value.replace(/[^\d]/g, '');
+      input.value = soloDigitos === '' ? '' : Number(soloDigitos).toLocaleString('es-CL');
+      recalcularDiferencia();
+    });
+  });
+
+  recalcularDiferencia();
+
+  // --- Envío del formulario ---
+  var form = document.getElementById('form-arqueo');
+  var btn = document.getElementById('btn-submit');
+  var msgOk = document.getElementById('msg-ok');
+  var msgErr = document.getElementById('msg-err');
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    msgOk.style.display = 'none';
+    msgErr.style.display = 'none';
+
+    if (!SCRIPT_URL || SCRIPT_URL.indexOf('PEGA_AQUI') === 0) {
+      msgErr.textContent = 'Falta configurar la conexión con la planilla (SCRIPT_URL). Avisa al administrador.';
+      msgErr.style.display = 'block';
+      return;
+    }
+
+    var dif = recalcularDiferencia();
+    if (dif.hayDescuadre) {
+      var texto = 'Se detectó un descuadre antes de cargar el cierre:\n';
+      if (dif.difCaja !== 0) texto += '- Diferencia caja: ' + fmt(dif.difCaja) + '\n';
+      if (dif.difTBK !== 0) texto += '- Diferencia TBK: ' + fmt(dif.difTBK) + '\n';
+      texto += '\n¿Confirmas que quieres cargar el arqueo igual, con ese descuadre?';
+      var continuar = window.confirm(texto);
+      if (!continuar) return;
+    }
+
+    var denominaciones = {};
+    DENOMINACIONES.forEach(function (valor) {
+      denominaciones[valor] = val('d' + valor);
+    });
+
+    var payload = {
+      local: selectLocal.value,
+      fecha: inputFecha.value,
+      saldoApertura: val('saldoApertura'),
+      ventaEfectivo: val('ventaEfectivo'),
+      devolNC: val('devolNC'),
+      retiro: val('retiro'),
+      vuelto: val('vuelto'),
+      debito: val('debito'),
+      credito: val('credito'),
+      vtaMercadoPago: val('vtaMercadoPago'),
+      vtaAsistida: val('vtaAsistida'),
+      montoTBK: val('montoTBK'),
+      montoMP: val('montoMP'),
+      denominaciones: denominaciones
+    };
+
+    btn.disabled = true;
+    btn.textContent = 'Cargando...';
+
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        btn.disabled = false;
+        btn.textContent = 'Cargar arqueo';
+        if (data.ok) {
+          form.reset();
+          inputFecha.value = iso;
+          recalcularTotal();
+          recalcularDiferencia();
+          msgOk.style.display = 'block';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          msgErr.textContent = 'Error: ' + (data.error || 'no se pudo guardar el arqueo.');
+          msgErr.style.display = 'block';
+        }
+      })
+      .catch(function (err) {
+        btn.disabled = false;
+        btn.textContent = 'Cargar arqueo';
+        msgErr.textContent = 'No se pudo conectar con la planilla. Revisa tu conexión e intenta de nuevo.';
+        msgErr.style.display = 'block';
+      });
+  });
+</script>
+</body>
+</html>
