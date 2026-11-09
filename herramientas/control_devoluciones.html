@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Devoluciones a Casa Matriz</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%93%A6%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0f1117; --card:#171a23; --card-2:#1f2330; --accent:#7c9cff; --accent-2:#ff9f6b;
+    --text:#eef0f5; --muted:#9aa1b4; --border:#262b3a;
+    --ok:#4ade80; --warn:#fbbf24; --bad:#f87171; --info:#60a5fa;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(1200px 600px at 20% -10%,#1a2035 0%,var(--bg) 60%);color:var(--text);min-height:100vh;font-size:14px}
+  header{padding:30px 20px 10px;text-align:center}
+  header h1{margin:0 0 6px;font-size:24px}
+  header p{margin:0;color:var(--muted);font-size:13px}
+  a{color:var(--accent)}
+  .demo{max-width:1100px;margin:12px auto 0;padding:10px 14px;border:1px dashed var(--warn);color:var(--warn);border-radius:10px;font-size:12.5px;text-align:center}
+  .tabs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:20px auto 0;padding:0 16px}
+  .tab{background:var(--card);border:1px solid var(--border);color:var(--muted);padding:10px 18px;border-radius:999px;cursor:pointer;font-size:14px;font-weight:600}
+  .tab.activo{color:#0f1117;background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent}
+  main{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+  .panel{display:none}.panel.activo{display:block}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:16px}
+  .card h2{margin:0 0 4px;font-size:17px}
+  .card .sub{margin:0 0 16px;color:var(--muted);font-size:12.5px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:600}
+  label .req{color:var(--accent-2)}
+  input,select,textarea{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:10px;font-size:14px;outline:none;font-family:inherit}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+  .invalido{border-color:var(--bad)!important}
+  textarea{resize:vertical;min-height:60px}
+  .btn{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#0f1117;border:0;padding:11px 20px;border-radius:10px;font-weight:700;cursor:pointer;font-size:14px}
+  .btn:disabled{opacity:.5;cursor:wait}
+  .btn-sec{background:var(--card-2);color:var(--text);border:1px solid var(--border);padding:8px 14px;border-radius:10px;cursor:pointer;font-size:13px}
+  .btn-sec:hover{border-color:var(--accent)}
+  .btn-x{background:none;border:0;color:var(--bad);cursor:pointer;font-size:16px}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:8px;text-align:left;border-bottom:1px solid var(--border);font-size:13px;vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  .prod td input{padding:7px 9px}
+  .acciones{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+  .total{color:var(--muted);font-size:13px;margin-left:auto}
+  .msg{padding:12px 14px;border-radius:10px;margin-top:14px;display:none;font-size:13.5px}
+  .msg.ok{display:block;background:rgba(74,222,128,.1);border:1px solid var(--ok);color:var(--ok)}
+  .msg.err{display:block;background:rgba(248,113,113,.1);border:1px solid var(--bad);color:var(--bad)}
+  .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap}
+  .b-env{background:rgba(96,165,250,.15);color:var(--info)}
+  .b-rec{background:rgba(251,191,36,.15);color:var(--warn)}
+  .b-dif{background:rgba(248,113,113,.15);color:var(--bad)}
+  .b-bsl{background:rgba(74,222,128,.15);color:var(--ok)}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer}
+  .kpi:hover{border-color:var(--accent)}
+  .kpi .n{font-size:26px;font-weight:800}
+  .kpi .t{font-size:12px;color:var(--muted)}
+  .filtros{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .filtros>*{flex:1;min-width:160px}
+  .item{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px}
+  .item-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+  .item-top b{font-size:15px}
+  .meta{color:var(--muted);font-size:12.5px;margin-top:6px;line-height:1.6}
+  .meta span{margin-right:14px}
+  details summary{cursor:pointer;color:var(--accent);font-size:12.5px;margin-top:8px}
+  .mini th,.mini td{padding:5px 8px;font-size:12.5px}
+  .form-inline{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)}
+  .form-inline .full{grid-column:1/-1}
+  .vacio{color:var(--muted);text-align:center;padding:24px}
+  .fila-click{cursor:pointer}.fila-click:hover td{background:var(--card-2)}
+  .tabla-wrap{overflow-x:auto}
+  .dias-alerta{color:var(--bad);font-weight:700}
+  .pin-box{max-width:340px;margin:0 auto;text-align:center}
+  .oculto{display:none!important}
+  #pegar-box textarea{min-height:110px;font-family:Consolas,monospace;font-size:12.5px}
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📦 Control de Devoluciones a Casa Matriz</h1>
+  <p>Local notifica el envío → Casa Matriz recepciona → se da de baja al ingresarla en Bsale</p>
+</header>
+
+<div class="demo oculto" id="aviso-demo">
+  ⚠️ <b>Modo demo:</b> no hay planilla conectada, los datos se guardan solo en este navegador. Pega la URL del Apps Script en <code>SCRIPT_URL</code> para conectarla al Drive. (PIN demo: 2580)
+</div>
+
+<div class="tabs">
+  <button class="tab activo" data-panel="p-local">🏬 Notificar devolución</button>
+  <button class="tab" data-panel="p-cm">🏢 Casa Matriz</button>
+  <button class="tab" data-panel="p-seg">📋 Seguimiento</button>
+</div>
+
+<main>
+  <!-- ================= LOCAL ================= -->
+  <section class="panel activo" id="p-local">
+    <div class="card">
+      <h2>Nueva devolución</h2>
+      <p class="sub">Completa todos los campos con <span style="color:var(--accent-2)">*</span> antes de despachar la caja.</p>
+      <form id="f-crear" novalidate>
+        <div class="grid">
+          <div><label>Local <span class="req">*</span></label><select id="c-local" required><option value="">Selecciona...</option></select></div>
+          <div><label>Responsable del envío <span class="req">*</span></label><input id="c-resp" required placeholder="Nombre y apellido"></div>
+          <div><label>Fecha de envío <span class="req">*</span></label><input id="c-fecha" type="date" required></div>
+          <div><label>Motivo <span class="req">*</span></label>
+            <select id="c-motivo" required>
+              <option value="">Selecciona...</option>
+              <option>Producto fallado / defectuoso</option>
+              <option>Devolución de cliente (garantía)</option>
+              <option>Error de despacho (no corresponde)</option>
+              <option>Producto dañado en tránsito</option>
+              <option>Sobrestock / retiro solicitado por CM</option>
+              <option>Cierre o traslado de local</option>
+              <option>Otro</option>
+            </select></div>
+          <div><label>N° guía de despacho <span class="req">*</span></label><input id="c-guia" required inputmode="numeric" placeholder="Ej: 45872"></div>
+          <div><label>Transporte <span class="req">*</span></label>
+            <select id="c-transp" required>
+              <option value="">Selecciona...</option>
+              <option>Bluex</option><option>Starken</option><option>Chilexpress</option>
+              <option>Camión Plaza Música</option><option>Entrega en mano</option><option>Otro</option>
+            </select></div>
+          <div><label>N° de seguimiento / OT</label><input id="c-seg" placeholder="Opcional"></div>
+          <div><label>N° de bultos <span class="req">*</span></label><input id="c-bultos" type="number" min="1" required placeholder="Ej: 2"></div>
+        </div>
+
+        <h2 style="margin-top:22px">Productos devueltos <span style="color:var(--accent-2)">*</span></h2>
+        <p class="sub">Uno por fila. Si lo tienes en Excel, copia las columnas Código · Descripción · Cantidad y usa "Pegar desde Excel".</p>
+        <div class="tabla-wrap">
+          <table class="prod">
+            <thead><tr><th style="width:24%">Código / SKU *</th><th>Descripción</th><th style="width:110px">Cantidad *</th><th style="width:40px"></th></tr></thead>
+            <tbody id="c-prods"></tbody>
+          </table>
+        </div>
+        <div class="acciones">
+          <button type="button" class="btn-sec" id="b-add">+ Agregar producto</button>
+          <button type="button" class="btn-sec" id="b-pegar">📋 Pegar desde Excel</button>
+          <span class="total" id="c-total">0 productos · 0 unidades</span>
+        </div>
+        <div id="pegar-box" class="oculto" style="margin-top:12px">
+          <textarea id="pegar-txt" placeholder="Pega aquí (Código [tab] Descripción [tab] Cantidad)"></textarea>
+          <div class="acciones"><button type="button" class="btn-sec" id="b-pegar-ok">Cargar filas</button></div>
+        </div>
+
+        <div style="margin-top:18px"><label>Observaciones <span id="obs-req" class="req oculto">* (obligatorio si el motivo es "Otro")</span></label>
+          <textarea id="c-obs" placeholder="Detalle de la falla, N° boleta del cliente, quién solicitó el retiro, etc."></textarea></div>
+
+        <div class="acciones"><button class="btn" id="b-crear" type="submit">Notificar devolución</button></div>
+        <div class="msg" id="m-crear"></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="item-top"><h2>Devoluciones de mi local</h2><button class="btn-sec" id="b-ref-local">↻ Actualizar</button></div>
+      <p class="sub" id="mis-sub">Selecciona tu local arriba para ver el estado de sus envíos.</p>
+      <div id="mis-lista"></div>
+    </div>
+  </section>
+
+  <!-- ================= CASA MATRIZ ================= -->
+  <section class="panel" id="p-cm">
+    <div class="card" id="cm-login">
+      <div class="pin-box">
+        <h2>Acceso Casa Matriz</h2>
+        <p class="sub">Ingresa el PIN para recepcionar y dar de baja devoluciones.</p>
+        <input id="pin" type="password" inputmode="numeric" placeholder="PIN" style="text-align:center;font-size:18px;letter-spacing:4px">
+        <div class="acciones" style="justify-content:center"><button class="btn" id="b-pin">Entrar</button></div>
+        <div class="msg" id="m-pin"></div>
+      </div>
+    </div>
+
+    <div id="cm-area" class="oculto">
+      <div class="filtros">
+        <input id="cm-buscar" placeholder="Buscar por ID, guía, local o código...">
+        <select id="cm-local"><option value="">Todos los locales</option></select>
+        <button class="btn-sec" id="b-ref-cm" style="flex:0">↻ Actualizar</button>
+        <button class="btn-sec" id="b-salir" style="flex:0">Salir</button>
+      </div>
+      <div class="card">
+        <h2>1 · Por recepcionar <span class="badge b-env" id="cnt-env">0</span></h2>
+        <p class="sub">Cajas notificadas por los locales que aún no llegan o no se han revisado. Al recibir, cuenta bultos y revisa contenido.</p>
+        <div id="lista-env"></div>
+      </div>
+      <div class="card">
+        <h2>2 · Por ingresar en Bsale <span class="badge b-rec" id="cnt-rec">0</span></h2>
+        <p class="sub">Ya recepcionadas. Al hacer el ingreso/traslado en Bsale, registra el N° de documento para darla de baja.</p>
+        <div id="lista-rec"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SEGUIMIENTO ================= -->
+  <section class="panel" id="p-seg">
+    <div class="kpis" id="kpis"></div>
+    <div class="card">
+      <div class="filtros">
+        <input id="s-buscar" placeholder="Buscar por ID, guía, código, responsable...">
+        <select id="s-local"><option value="">Todos los locales</option></select>
+        <select id="s-estado"><option value="">Todos los estados</option></select>
+        <select id="s-motivo"><option value="">Todos los motivos</option></select>
+        <input id="s-desde" type="date" title="Enviadas desde">
+      </div>
+      <div class="acciones" style="margin:0 0 12px">
+        <button class="btn-sec" id="b-ref-seg">↻ Actualizar</button>
+        <button class="btn-sec" id="b-csv">⬇️ Exportar a Excel (CSV)</button>
+        <span class="total" id="s-total"></span>
+      </div>
+      <div class="tabla-wrap">
+        <table>
+          <thead><tr><th>ID</th><th>Local</th><th>Envío</th><th>Motivo</th><th>Guía</th><th>Bultos</th><th>Unid.</th><th>Estado</th><th>Días</th><th>Doc Bsale</th></tr></thead>
+          <tbody id="s-tabla"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>Plaza Música · Control de devoluciones · los datos se guardan en la planilla "Control Devoluciones" del Drive</footer>
+
+<script>
+  // ============================================================
+  // CONFIGURACIÓN
+  // Pega aquí la URL de la aplicación web de Apps Script (termina en /exec).
+  // Si se deja vacía, la herramienta funciona en MODO DEMO (solo este navegador).
+  // ============================================================
+  var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwfKKJPr0XO3rxPzVUArRD1j2cq_G5vhRdtE8Gp6A5UmeuzjsqaUvY9CNA3PGQKk0nR/exec';
+  var DIAS_ALERTA = 5; // días en tránsito para marcar en rojo
+
+  var LOCALES = [
+    "PM01 Plaza Egaña","PM02 Plaza Tobalaba","PM03 Costanera Center","PM04 Open Kennedy",
+    "PM05 Alto Las Condes","PM06 Marina Arauco","PM07 Portal La Reina","PM08 Castro",
+    "PM09 Mall Sport","PM10 Plaza El Trébol","PM11 Concepción","PM12 Mall MUT",
+    "PM13 Plaza Copiapó","PM14 Plaza La Serena","PM16 Plaza Maule","PM17 Arauco Maipú",
+    "PM18 Plaza Antofagasta","PM19 Plaza Calama","PM20 Plaza Vespucio","PM22 Patio Bellavista",
+    "PM23 Florida Center","PM24 Arauco Chillán","PM25 Portal Ñuñoa","PM26 Portal Rancagua",
+    "PM28 Paseo Puerto Varas","PM29 Plaza Oeste","PM30 Portal Osorno","PM31 Portal Temuco",
+    "PM32 Portal Valdivia","PM33 Plaza Iquique","PM34 Plaza Arica","PM36 Open La Calera",
+    "PM37 Vivo Los Trapenses","PM38 Open Ovalle","PM39 Vivo Coquimbo","PM41 Plaza Sur",
+    "PM43 Plaza Los Ángeles","PM44 Plaza Los Dominicos","PM45 Paseo Puerto Montt"
+  ];
+
+  var ESTADOS = ['Enviada','Recepcionada','Recepcionada con diferencias','Ingresada en Bsale'];
+  var DATOS = [];
+  var PIN = '';
+
+  // ---------------- Utilidades ----------------
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function hoyISO(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function ahora(){ var d=new Date(); return hoyISO()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+  function fmtFecha(s){ if(!s) return ''; var p=String(s).slice(0,10).split('-'); return p.length===3 ? p[2]+'-'+p[1]+'-'+p[0] : s; }
+  function diasEntre(a,b){ if(!a) return ''; var d1=new Date(String(a).slice(0,10)+'T00:00'), d2=b?new Date(String(b).slice(0,10)+'T00:00'):new Date(hoyISO()+'T00:00'); return Math.max(0,Math.round((d2-d1)/86400000)); }
+  function badge(e){ var c={'Enviada':'b-env','Recepcionada':'b-rec','Recepcionada con diferencias':'b-dif','Ingresada en Bsale':'b-bsl'}[e]||'b-env'; return '<span class="badge '+c+'">'+esc(e)+'</span>'; }
+  function msg(el,txt,ok){ el.classList.remove('ok','err'); el.classList.add('msg', ok?'ok':'err'); el.innerHTML=txt; }
+  function llenarSelect(sel,arr){ arr.forEach(function(v){ var o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); }); }
+
+  // ---------------- API (Apps Script o demo) ----------------
+  function api(accion, data){
+    data = data || {};
+    if (!SCRIPT_URL) return Promise.resolve(demoApi(accion, data));
+    if (accion === 'listar'){
+      return fetch(SCRIPT_URL + '?accion=listar').then(function(r){ return r.json(); });
+    }
+    data.accion = accion;
+    return fetch(SCRIPT_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(data) })
+      .then(function(r){ return r.json(); });
+  }
+
+  // --- Demo: imita el backend usando localStorage ---
+  function demoGet(){ try { return JSON.parse(localStorage.getItem('devol-demo')||'[]'); } catch(e){ return []; } }
+  function demoSet(a){ try { localStorage.setItem('devol-demo', JSON.stringify(a)); } catch(e){} }
+  function demoApi(accion, d){
+    var lista = demoGet();
+    try {
+      if (accion === 'listar') return { ok:true, data: lista.slice().reverse() };
+      if (accion === 'validarPin') return { ok: d.pin === '2580', error:'PIN incorrecto' };
+      if (accion === 'crear'){
+        if (lista.some(function(x){ return x['Local']===d.local && x['N° guía despacho']===String(d.guia); })) throw new Error('Ya existe una devolución de '+d.local+' con la guía '+d.guia);
+        var anio = hoyISO().slice(0,4);
+        var n = lista.filter(function(x){ return x.ID.indexOf('DEV-'+anio)===0; }).length + 1;
+        var id = 'DEV-'+anio+'-'+String(n).padStart(4,'0');
+        lista.push({ 'ID':id,'Fecha registro':ahora(),'Local':d.local,'Responsable envío':d.responsable,'Fecha envío':d.fechaEnvio,
+          'Motivo':d.motivo,'N° guía despacho':String(d.guia),'Transporte':d.transporte,'N° seguimiento':d.seguimiento,
+          'Bultos':String(d.bultos),'Unidades':String(d.productos.reduce(function(s,p){return s+Number(p.cantidad);},0)),
+          'Observaciones local':d.observaciones,'Estado':'Enviada', productos:d.productos });
+        demoSet(lista); return { ok:true, id:id };
+      }
+      if (d.pin !== '2580') throw new Error('PIN de Casa Matriz incorrecto');
+      var x = lista.filter(function(r){ return r.ID===d.id; })[0];
+      if (!x) throw new Error('No se encontró '+d.id);
+      if (accion === 'recepcionar'){
+        if (x.Estado!=='Enviada') throw new Error('Ya está en estado: '+x.Estado);
+        x.Estado = d.revision==='Con diferencias' ? 'Recepcionada con diferencias' : 'Recepcionada';
+        x['Fecha recepción']=ahora(); x['Recibido por']=d.recibidoPor; x['Bultos recibidos']=String(d.bultosRecibidos); x['Revisión']=d.revision; x['Obs. recepción']=d.obs;
+      } else if (accion === 'baja'){
+        if (x.Estado.indexOf('Recepcionada')!==0) throw new Error('Solo se puede dar de baja una devolución recepcionada');
+        x.Estado='Ingresada en Bsale'; x['Fecha ingreso Bsale']=ahora(); x['Ingresado por']=d.ingresadoPor; x['N° doc Bsale']=String(d.docBsale); x['Obs. ingreso']=d.obs;
+      }
+      demoSet(lista); return { ok:true };
+    } catch(e){ return { ok:false, error:e.message }; }
+  }
+
+  function cargar(){
+    return api('listar').then(function(r){
+      if (!r.ok) throw new Error(r.error || 'Error al leer la planilla');
+      DATOS = r.data || [];
+      renderTodo();
+    }).catch(function(e){
+      $('mis-lista').innerHTML = '<div class="vacio">No se pudo conectar con la planilla: '+esc(e.message)+'</div>';
+    });
+  }
+  function renderTodo(){ renderMis(); renderCM(); renderSeg(); }
+
+  // ---------------- Tabs ----------------
+  document.querySelectorAll('.tab').forEach(function(t){
+    t.addEventListener('click', function(){
+      document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('activo'); });
+      document.querySelectorAll('.panel').forEach(function(x){ x.classList.remove('activo'); });
+      t.classList.add('activo'); $(t.dataset.panel).classList.add('activo');
+      cargar();
+    });
+  });
+
+  // ---------------- Formulario local ----------------
+  llenarSelect($('c-local'), LOCALES);
+  llenarSelect($('cm-local'), LOCALES);
+  llenarSelect($('s-local'), LOCALES);
+  llenarSelect($('s-estado'), ESTADOS);
+  llenarSelect($('s-motivo'), Array.prototype.slice.call($('c-motivo').options,1).map(function(o){ return o.value; }));
+  $('c-fecha').value = hoyISO(); $('c-fecha').max = hoyISO();
+  try {
+    var lg = localStorage.getItem('devol-local'); if (lg) $('c-local').value = lg;
+    var rg = localStorage.getItem('devol-resp'); if (rg) $('c-resp').value = rg;
+  } catch(e){}
+
+  $('c-local').addEventListener('change', function(){ try{ localStorage.setItem('devol-local', this.value); }catch(e){} renderMis(); });
+  $('c-motivo').addEventListener('change', function(){ $('obs-req').classList.toggle('oculto', this.value!=='Otro'); });
+
+  function filaProd(p){
+    p = p || {};
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td><input class="p-cod" placeholder="SKU o código de barra" value="'+esc(p.codigo)+'"></td>'+
+      '<td><input class="p-desc" placeholder="Artista - Título / producto" value="'+esc(p.descripcion)+'"></td>'+
+      '<td><input class="p-cant" type="number" min="1" value="'+esc(p.cantidad||1)+'"></td>'+
+      '<td><button type="button" class="btn-x" title="Quitar">✕</button></td>';
+    tr.querySelector('.btn-x').onclick = function(){ tr.remove(); if(!$('c-prods').children.length) filaProd(); totalProds(); };
+    tr.querySelectorAll('input').forEach(function(i){ i.addEventListener('input', totalProds); });
+    tr.querySelector('.p-cant').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); filaProd(); var f=$('c-prods').lastChild; f.querySelector('.p-cod').focus(); } });
+    $('c-prods').appendChild(tr); totalProds();
+  }
+  function leerProds(){
+    return Array.prototype.map.call($('c-prods').children, function(tr){
+      return { codigo: tr.querySelector('.p-cod').value.trim(), descripcion: tr.querySelector('.p-desc').value.trim(), cantidad: Number(tr.querySelector('.p-cant').value) };
+    }).filter(function(p){ return p.codigo || p.descripcion; });
+  }
+  function totalProds(){
+    var ps = leerProds().filter(function(p){ return p.codigo && p.cantidad>0; });
+    $('c-total').textContent = ps.length+' producto'+(ps.length===1?'':'s')+' · '+ps.reduce(function(s,p){return s+p.cantidad;},0)+' unidades';
+  }
+  $('b-add').onclick = function(){ filaProd(); };
+  $('b-pegar').onclick = function(){ $('pegar-box').classList.toggle('oculto'); $('pegar-txt').focus(); };
+  $('b-pegar-ok').onclick = function(){
+    var lineas = $('pegar-txt').value.split(/\r?\n/).filter(function(l){ return l.trim(); });
+    if (!lineas.length) return;
+    // quitar filas vacías actuales
+    Array.prototype.slice.call($('c-prods').children).forEach(function(tr){ if(!tr.querySelector('.p-cod').value.trim() && !tr.querySelector('.p-desc').value.trim()) tr.remove(); });
+    lineas.forEach(function(l){
+      var c = l.split('\t');
+      if (c.length === 2) c = [c[0], '', c[1]];
+      var cant = parseInt(String(c[2]||'1').replace(/\D/g,''),10);
+      if (/c[oó]digo|sku/i.test(c[0])) return; // encabezado
+      filaProd({ codigo:(c[0]||'').trim(), descripcion:(c[1]||'').trim(), cantidad: isNaN(cant)||cant<1 ? 1 : cant });
+    });
+    $('pegar-txt').value=''; $('pegar-box').classList.add('oculto');
+  };
+  filaProd();
+
+  $('f-crear').addEventListener('submit', function(e){
+    e.preventDefault();
+    var m = $('m-crear');
+    var campos = ['c-local','c-resp','c-fecha','c-motivo','c-guia','c-transp','c-bultos'];
+    var faltan = [];
+    campos.forEach(function(id){ var el=$(id); var mal=!String(el.value).trim(); el.classList.toggle('invalido', mal); if(mal) faltan.push(el.closest('div').querySelector('label').textContent.replace('*','').trim()); });
+    if (Number($('c-bultos').value) < 1 && $('c-bultos').value) { faltan.push('N° de bultos (mínimo 1)'); $('c-bultos').classList.add('invalido'); }
+    if ($('c-fecha').value > hoyISO()) { faltan.push('Fecha de envío no puede ser futura'); $('c-fecha').classList.add('invalido'); }
+    var prods = leerProds();
+    var malos = prods.filter(function(p){ return !p.codigo || !(p.cantidad>0); });
+    if (!prods.length) faltan.push('al menos un producto');
+    if (malos.length) faltan.push('código y cantidad en todas las filas de productos');
+    var obsMal = $('c-motivo').value==='Otro' && !$('c-obs').value.trim();
+    $('c-obs').classList.toggle('invalido', obsMal);
+    if (obsMal) faltan.push('Observaciones (motivo "Otro")');
+    if (faltan.length){ msg(m,'Falta completar: <b>'+esc(faltan.join(', '))+'</b>',false); return; }
+
+    var data = { local:$('c-local').value, responsable:$('c-resp').value.trim(), fechaEnvio:$('c-fecha').value, motivo:$('c-motivo').value,
+      guia:$('c-guia').value.trim(), transporte:$('c-transp').value, seguimiento:$('c-seg').value.trim(), bultos:$('c-bultos').value,
+      productos:prods, observaciones:$('c-obs').value.trim() };
+    var b = $('b-crear'); b.disabled = true; b.textContent = 'Enviando...';
+    api('crear', data).then(function(r){
+      if (!r.ok) throw new Error(r.error);
+      try{ localStorage.setItem('devol-resp', data.responsable); }catch(e){}
+      msg(m,'✅ Devolución registrada con el N° <b>'+esc(r.id)+'</b>. Escríbelo en la caja junto a la guía '+esc(data.guia)+'.',true);
+      ['c-guia','c-seg','c-bultos','c-obs'].forEach(function(id){ $(id).value=''; });
+      $('c-motivo').value=''; $('c-transp').value=''; $('c-prods').innerHTML=''; filaProd();
+      cargar();
+    }).catch(function(err){ msg(m,'❌ '+esc(err.message),false); })
+      .then(function(){ b.disabled=false; b.textContent='Notificar devolución'; });
+  });
+  document.querySelectorAll('#f-crear input, #f-crear select, #f-crear textarea').forEach(function(el){ el.addEventListener('input', function(){ el.classList.remove('invalido'); }); });
+
+  // ---------------- Tarjeta de devolución ----------------
+  function tablaProds(ps){
+    if (!ps || !ps.length) return '<div class="meta">Sin detalle</div>';
+    return '<table class="mini"><thead><tr><th>Código</th><th>Descripción</th><th>Cant.</th></tr></thead><tbody>'+
+      ps.map(function(p){ return '<tr><td>'+esc(p.codigo)+'</td><td>'+esc(p.descripcion)+'</td><td>'+esc(p.cantidad)+'</td></tr>'; }).join('')+'</tbody></table>';
+  }
+  function tarjeta(x, extra){
+    var dias = diasEntre(x['Fecha envío'], x['Fecha recepción']);
+    var alerta = x.Estado==='Enviada' && dias>=DIAS_ALERTA;
+    return '<div class="item"><div class="item-top"><b>'+esc(x.ID)+' · '+esc(x.Local)+'</b>'+badge(x.Estado)+'</div>'+
+      '<div class="meta"><span>📅 Envío '+esc(fmtFecha(x['Fecha envío']))+'</span><span'+(alerta?' class="dias-alerta"':'')+'>⏱ '+dias+' día'+(dias===1?'':'s')+(x.Estado==='Enviada'?' en tránsito':'')+'</span>'+
+      '<span>🧾 Guía '+esc(x['N° guía despacho'])+'</span><span>🚚 '+esc(x.Transporte)+(x['N° seguimiento']?' ('+esc(x['N° seguimiento'])+')':'')+'</span>'+
+      '<span>📦 '+esc(x.Bultos)+' bulto(s) · '+esc(x.Unidades)+' unid.</span><br>'+
+      '<span>Motivo: '+esc(x.Motivo)+'</span><span>Envía: '+esc(x['Responsable envío'])+'</span>'+
+      (x['Observaciones local']?'<br><span>💬 '+esc(x['Observaciones local'])+'</span>':'')+
+      (x['Fecha recepción']?'<br><span>✔️ Recibido '+esc(fmtFecha(x['Fecha recepción']))+' por '+esc(x['Recibido por'])+' · '+esc(x['Bultos recibidos'])+' bulto(s) · '+esc(x['Revisión'])+'</span>'+(x['Obs. recepción']?'<span>💬 '+esc(x['Obs. recepción'])+'</span>':''):'')+
+      (x['N° doc Bsale']?'<br><span>🟢 Bsale doc '+esc(x['N° doc Bsale'])+' · '+esc(fmtFecha(x['Fecha ingreso Bsale']))+' por '+esc(x['Ingresado por'])+'</span>':'')+
+      '</div><details><summary>Ver productos ('+(x.productos?x.productos.length:0)+')</summary>'+tablaProds(x.productos)+'</details>'+(extra||'')+'</div>';
+  }
+
+  function renderMis(){
+    var local = $('c-local').value;
+    if (!local){ $('mis-sub').textContent='Selecciona tu local arriba para ver el estado de sus envíos.'; $('mis-lista').innerHTML=''; return; }
+    var lista = DATOS.filter(function(x){ return x.Local===local; });
+    var pend = lista.filter(function(x){ return x.Estado!=='Ingresada en Bsale'; }).length;
+    $('mis-sub').textContent = local+' · '+lista.length+' devoluciones registradas · '+pend+' sin cerrar';
+    $('mis-lista').innerHTML = lista.length ? lista.slice(0,30).map(function(x){ return tarjeta(x); }).join('') : '<div class="vacio">Este local aún no tiene devoluciones registradas.</div>';
+  }
+
+  // ---------------- Casa Matriz ----------------
+  try { PIN = sessionStorage.getItem('devol-pin') || ''; } catch(e){}
+  function entrarCM(){ $('cm-login').classList.add('oculto'); $('cm-area').classList.remove('oculto'); renderCM(); }
+  if (PIN) entrarCM();
+  $('pin').addEventListener('keydown', function(e){ if(e.key==='Enter') $('b-pin').click(); });
+  $('b-pin').onclick = function(){
+    var p = $('pin').value.trim(); if(!p) return;
+    api('validarPin', {pin:p}).then(function(r){
+      if (!r.ok) throw new Error(r.error||'PIN incorrecto');
+      PIN = p; try{ sessionStorage.setItem('devol-pin',p); }catch(e){}
+      entrarCM(); cargar();
+    }).catch(function(e){ msg($('m-pin'),'❌ '+esc(e.message),false); });
+  };
+  $('b-salir').onclick = function(){ PIN=''; try{ sessionStorage.removeItem('devol-pin'); }catch(e){} $('cm-area').classList.add('oculto'); $('cm-login').classList.remove('oculto'); $('pin').value=''; };
+
+  function coincide(x, txt){
+    if (!txt) return true;
+    var s = [x.ID,x.Local,x['N° guía despacho'],x['N° seguimiento'],x['Responsable envío'],x['N° doc Bsale'],x.Motivo].concat((x.productos||[]).map(function(p){return p.codigo+' '+p.descripcion;})).join(' ').toLowerCase();
+    return s.indexOf(txt) >= 0;
+  }
+  function renderCM(){
+    if (!PIN) return;
+    var txt = $('cm-buscar').value.trim().toLowerCase(), loc = $('cm-local').value;
+    var base = DATOS.filter(function(x){ return (!loc || x.Local===loc) && coincide(x, txt); });
+    var env = base.filter(function(x){ return x.Estado==='Enviada'; }).reverse(); // más antiguas primero
+    var rec = base.filter(function(x){ return x.Estado.indexOf('Recepcionada')===0; }).reverse();
+    $('cnt-env').textContent = env.length; $('cnt-rec').textContent = rec.length;
+
+    $('lista-env').innerHTML = env.length ? env.map(function(x){
+      var id = esc(x.ID);
+      return tarjeta(x, '<div class="form-inline" data-id="'+id+'">'+
+        '<div><label>Recibido por *</label><input class="f-quien" placeholder="Nombre"></div>'+
+        '<div><label>Bultos recibidos * (notificados: '+esc(x.Bultos)+')</label><input class="f-bultos" type="number" min="0" value="'+esc(x.Bultos)+'"></div>'+
+        '<div><label>Revisión del contenido *</label><select class="f-rev"><option>Conforme</option><option>Con diferencias</option></select></div>'+
+        '<div class="full"><label>Observación (obligatoria si hay diferencias)</label><input class="f-obs" placeholder="Ej: faltan 2 unid. del SKU 12345, caja abierta, etc."></div>'+
+        '<div class="full"><button class="btn b-recep">✔ Aceptar recepción</button> <span class="msg f-msg" style="display:none"></span></div></div>');
+    }).join('') : '<div class="vacio">No hay devoluciones pendientes de recepción 🎉</div>';
+
+    $('lista-rec').innerHTML = rec.length ? rec.map(function(x){
+      return tarjeta(x, '<div class="form-inline" data-id="'+esc(x.ID)+'">'+
+        '<div><label>N° documento Bsale *</label><input class="f-doc" placeholder="N° traslado / ingreso"></div>'+
+        '<div><label>Ingresado por *</label><input class="f-quien" placeholder="Nombre"></div>'+
+        '<div class="full"><label>Observación</label><input class="f-obs" placeholder="Opcional"></div>'+
+        '<div class="full"><button class="btn b-baja">🟢 Dar de baja (ingresada en Bsale)</button> <span class="msg f-msg" style="display:none"></span></div></div>');
+    }).join('') : '<div class="vacio">No hay devoluciones pendientes de ingreso a Bsale.</div>';
+
+    var quienCM = ''; try{ quienCM = localStorage.getItem('devol-cm-quien')||''; }catch(e){}
+    document.querySelectorAll('#cm-area .f-quien').forEach(function(i){ i.value = quienCM; });
+    document.querySelectorAll('#cm-area .b-recep').forEach(function(b){ b.onclick = function(){ accionCM(b,'recepcionar'); }; });
+    document.querySelectorAll('#cm-area .b-baja').forEach(function(b){ b.onclick = function(){ accionCM(b,'baja'); }; });
+  }
+
+  function accionCM(btn, accion){
+    var f = btn.closest('.form-inline'), m = f.querySelector('.f-msg');
+    var q = function(c){ var el=f.querySelector(c); return el ? el.value.trim() : ''; };
+    var data = { pin:PIN, id:f.dataset.id, obs:q('.f-obs') }, falta = [];
+    if (!q('.f-quien')) falta.push(accion==='baja'?'Ingresado por':'Recibido por');
+    if (accion==='recepcionar'){
+      data.recibidoPor=q('.f-quien'); data.bultosRecibidos=q('.f-bultos'); data.revision=q('.f-rev');
+      if (data.bultosRecibidos==='') falta.push('Bultos recibidos');
+      if (data.revision==='Con diferencias' && !data.obs) falta.push('Observación de diferencias');
+    } else {
+      data.ingresadoPor=q('.f-quien'); data.docBsale=q('.f-doc');
+      if (!data.docBsale) falta.push('N° documento Bsale');
+    }
+    if (falta.length){ m.style.display=''; msg(m,'Falta: '+esc(falta.join(', ')),false); return; }
+    try{ localStorage.setItem('devol-cm-quien', q('.f-quien')); }catch(e){}
+    btn.disabled = true; btn.textContent = 'Guardando...';
+    api(accion, data).then(function(r){
+      if (!r.ok) throw new Error(r.error);
+      return cargar();
+    }).catch(function(e){
+      m.style.display=''; msg(m,'❌ '+esc(e.message),false); btn.disabled=false;
+      btn.textContent = accion==='baja' ? '🟢 Dar de baja (ingresada en Bsale)' : '✔ Aceptar recepción';
+      if (/PIN/.test(e.message)) $('b-salir').click();
+    });
+  }
+  ['cm-buscar','cm-local'].forEach(function(id){ $(id).addEventListener('input', renderCM); });
+
+  // ---------------- Seguimiento ----------------
+  var KPI_SEL = -1;
+  var KPIS_FN = [];
+  function filtradosSeg(){
+    var txt=$('s-buscar').value.trim().toLowerCase(), loc=$('s-local').value, est=$('s-estado').value, mot=$('s-motivo').value, desde=$('s-desde').value;
+    var fk = KPI_SEL>=0 && KPIS_FN[KPI_SEL] ? KPIS_FN[KPI_SEL][2] : null;
+    return DATOS.filter(function(x){
+      return (!loc||x.Local===loc) && (!est||x.Estado===est) && (!mot||x.Motivo===mot) && (!desde||String(x['Fecha envío'])>=desde) && coincide(x,txt) &&
+        (!fk || fk(x));
+    });
+  }
+  function renderSeg(){
+    var D = DIAS_ALERTA;
+    KPIS_FN = [
+      ['🚚 En tránsito', function(x){return x.Estado==='Enviada';}],
+      ['⏰ '+D+'+ días sin llegar', function(x){return x.Estado==='Enviada' && diasEntre(x['Fecha envío'])>=D;}],
+      ['📥 Pendientes de Bsale', function(x){return x.Estado.indexOf('Recepcionada')===0;}],
+      ['⚠️ Con diferencias', function(x){return x.Estado==='Recepcionada con diferencias';}],
+      ['✅ Ingresadas en Bsale', function(x){return x.Estado==='Ingresada en Bsale';}]
+    ].map(function(k){ return [k[0], DATOS.filter(k[1]).length, k[1]]; });
+    $('kpis').innerHTML = KPIS_FN.map(function(v,i){ return '<div class="kpi" data-i="'+i+'"'+(KPI_SEL===i?' style="border-color:var(--accent)"':'')+'><div class="n">'+v[1]+'</div><div class="t">'+v[0]+'</div></div>'; }).join('') +
+      '<div class="kpi" data-i="-1"'+(KPI_SEL<0?' style="border-color:var(--accent)"':'')+'><div class="n">'+DATOS.length+'</div><div class="t">📦 Total registradas</div></div>';
+    document.querySelectorAll('.kpi').forEach(function(el){
+      el.onclick = function(){ var i=Number(el.dataset.i); KPI_SEL = (KPI_SEL===i) ? -1 : i; renderSeg(); };
+    });
+    renderTabla();
+  }
+  function renderTabla(){
+    var f = filtradosSeg();
+    $('s-total').textContent = f.length+' resultado'+(f.length===1?'':'s')+' · '+f.reduce(function(s,x){return s+Number(x.Unidades||0);},0)+' unidades';
+    $('s-tabla').innerHTML = f.length ? f.map(function(x,i){
+      var d = diasEntre(x['Fecha envío'], x['Fecha recepción']);
+      return '<tr class="fila-click" data-i="'+i+'"><td><b>'+esc(x.ID)+'</b></td><td>'+esc(x.Local)+'</td><td>'+esc(fmtFecha(x['Fecha envío']))+'</td><td>'+esc(x.Motivo)+'</td><td>'+esc(x['N° guía despacho'])+'</td><td>'+esc(x.Bultos)+'</td><td>'+esc(x.Unidades)+'</td><td>'+badge(x.Estado)+'</td><td'+(x.Estado==='Enviada'&&d>=DIAS_ALERTA?' class="dias-alerta"':'')+'>'+d+'</td><td>'+esc(x['N° doc Bsale']||'')+'</td></tr>'+
+        '<tr class="oculto det" data-d="'+i+'"><td colspan="10">'+tarjeta(x)+'</td></tr>';
+    }).join('') : '<tr><td colspan="10" class="vacio">Sin resultados</td></tr>';
+    document.querySelectorAll('#s-tabla .fila-click').forEach(function(tr){
+      tr.onclick = function(){ document.querySelector('#s-tabla tr[data-d="'+tr.dataset.i+'"]').classList.toggle('oculto'); };
+    });
+  }
+  ['s-buscar','s-local','s-estado','s-motivo','s-desde'].forEach(function(id){ $(id).addEventListener('input', renderTabla); });
+
+  $('b-csv').onclick = function(){
+    var f = filtradosSeg();
+    var cols = ['ID','Fecha registro','Local','Responsable envío','Fecha envío','Motivo','N° guía despacho','Transporte','N° seguimiento','Bultos','Unidades','Observaciones local','Estado','Fecha recepción','Recibido por','Bultos recibidos','Revisión','Obs. recepción','Fecha ingreso Bsale','Ingresado por','N° doc Bsale','Obs. ingreso'];
+    var filas = [cols.concat(['Código','Descripción','Cantidad'])];
+    f.forEach(function(x){
+      var ps = (x.productos && x.productos.length) ? x.productos : [{}];
+      ps.forEach(function(p){ filas.push(cols.map(function(c){return x[c]||'';}).concat([p.codigo||'',p.descripcion||'',p.cantidad||''])); });
+    });
+    var csv = '﻿' + filas.map(function(r){ return r.map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(';'); }).join('\r\n');
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+    a.download = 'devoluciones_'+hoyISO()+'.csv'; a.click();
+  };
+
+  ['b-ref-local','b-ref-cm','b-ref-seg'].forEach(function(id){ $(id).onclick = cargar; });
+
+  // ---------------- Inicio ----------------
+  if (!SCRIPT_URL) $('aviso-demo').classList.remove('oculto');
+  cargar();
+</script>
+</body>
+</html>
